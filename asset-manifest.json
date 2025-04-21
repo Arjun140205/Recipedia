@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/Recipe-Finder-Reactapp/static/css/main.40df3699.css",
+    "main.js": "/Recipe-Finder-Reactapp/static/js/main.2b0cef0f.js",
+    "index.html": "/Recipe-Finder-Reactapp/index.html",
+    "main.40df3699.css.map": "/Recipe-Finder-Reactapp/static/css/main.40df3699.css.map",
+    "main.2b0cef0f.js.map": "/Recipe-Finder-Reactapp/static/js/main.2b0cef0f.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.40df3699.css",
+    "static/js/main.2b0cef0f.js"
+  ]
+}
