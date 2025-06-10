@@ -119,6 +119,13 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  const handleDelete = (e) => {
+    e.stopPropagation(); // Prevent opening the modal when clicking delete
+    if (window.confirm('Are you sure you want to delete this recipe?')) {
+      onDelete();
+    }
+  };
+
   const handleImageError = () => {
     setImageError(true);
   };
@@ -134,7 +141,8 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
         borderRadius: '12px',
         overflow: 'hidden',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        position: 'relative' // Added for delete button positioning
       }}
       onClick={onSelect}
       role="button"
@@ -145,6 +153,34 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
         }
       }}
     >
+      {/* Delete button */}
+      <button
+        onClick={handleDelete}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          zIndex: 2,
+          backgroundColor: 'rgba(255, 59, 48, 0.9)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '50%',
+          width: '32px',
+          height: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          opacity: 0,
+          transition: 'opacity 0.2s ease',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+        onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+      >
+        <FaTimes />
+      </button>
+
       <div style={{ position: 'relative', height: '200px' }}>
         <img
           src={imageError ? '/default-recipe-image.jpg' : recipe.image}
@@ -247,11 +283,21 @@ const SharePreview = ({ recipe }) => {
 const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, onQRCodeClose }) => {
   const [activeTab, setActiveTab] = useState('ingredients');
   const [showShareOptions, setShowShareOptions] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Add safety check for recipe
   if (!recipe) {
     return null;
   }
+
+  const handleDelete = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    onDelete();
+    onClose();
+  };
 
   // Share options with their actions
   const shareOptions = [
@@ -594,6 +640,54 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, 
           </div>
         </div>
       )}
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: 'white',
+          padding: '2rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+          zIndex: 1001,
+          textAlign: 'center',
+          maxWidth: '400px',
+          width: '90%'
+        }}>
+          <h3 style={{ marginTop: 0 }}>Delete Recipe</h3>
+          <p>Are you sure you want to delete "{recipe.title}"? This action cannot be undone.</p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -898,8 +992,13 @@ const Dashboard = () => {
       <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
         {/* Search and Filter Section */}
         <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ flex: 1, position: 'relative' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '1rem' 
+          }}>
+            <div style={{ flex: 1, position: 'relative', marginRight: '1rem' }}>
               <input
                 type="text"
                 value={searchQuery}
@@ -922,6 +1021,56 @@ const Dashboard = () => {
                 color: '#666'
               }} />
             </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowForm(true)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#e67e22',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <FaPlus /> Add Recipe
+              </motion.button>
+
+              {selectedRecipe && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to delete "${selectedRecipe.title}"?`)) {
+                      handleDelete(selectedRecipe._id);
+                      setSelectedRecipe(null);
+                    }
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <FaTimes /> Delete Selected
+                </motion.button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
@@ -1056,24 +1205,6 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowForm(true)}
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#e67e22',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <FaPlus /> Add Recipe
-            </motion.button>
           </div>
         </div>
 
@@ -1090,13 +1221,49 @@ const Dashboard = () => {
           ) : (
             <AnimatePresence>
               {paginatedRecipes.map(recipe => (
-                <RecipeCard
+                <motion.div
                   key={recipe._id}
-                  recipe={recipe}
-                  onSelect={() => setSelectedRecipe(recipe)}
-                  onDelete={() => handleDelete(recipe._id)}
-                  onRate={(rating) => handleRateRecipe(recipe._id, rating)}
-                />
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  style={{ position: 'relative' }}
+                >
+                  <RecipeCard
+                    recipe={recipe}
+                    onSelect={() => setSelectedRecipe(recipe)}
+                    onDelete={() => handleDelete(recipe._id)}
+                    onRate={(rating) => handleRateRecipe(recipe._id, rating)}
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Are you sure you want to delete "${recipe.title}"?`)) {
+                        handleDelete(recipe._id);
+                      }
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      zIndex: 10,
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}
+                  >
+                    <FaTimes />
+                  </motion.button>
+                </motion.div>
               ))}
             </AnimatePresence>
           )}
