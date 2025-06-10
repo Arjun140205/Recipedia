@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import React from 'react';
+import DOMPurify from 'dompurify';
 import { createRecipe, getRecipes, deleteRecipe, updateRecipe } from '../services/recipeService';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTimes, FaUtensils, FaEdit, FaSpinner, FaSearch, FaFilter, FaSort, FaSave, FaStar, FaRegStar, FaStarHalfAlt, FaFire, FaClock, FaCalendarAlt, FaShare, FaBookmark, FaPrint, FaList, FaChartLine, FaLink, FaFacebook, FaTwitter, FaWhatsapp, FaPinterest, FaEnvelope, FaCopy, FaInstagram, FaQrcode, FaLinkedin, FaReddit, FaTelegram, FaDownload, FaInfoCircle, FaCircle } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaUtensils, FaEdit, FaSpinner, FaSearch, FaFilter, FaSort, FaSave, FaStar, FaRegStar, FaStarHalfAlt, FaFire, FaClock, FaShare, FaBookmark, FaPrint, FaList, FaChartLine, FaLink, FaFacebook, FaTwitter, FaWhatsapp, FaPinterest, FaEnvelope, FaCopy, FaInstagram, FaQrcode, FaLinkedin, FaReddit, FaTelegram, FaDownload, FaInfoCircle, FaCircle } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 
 const RECIPE_CATEGORIES = {
@@ -115,6 +117,11 @@ const StarRating = ({ rating, onRate, size = '1.2rem', interactive = false }) =>
 
 const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
 
   return (
     <motion.div
@@ -140,8 +147,9 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
     >
       <div style={{ position: 'relative', height: '200px' }}>
         <img
-          src={recipe.image}
-          alt={recipe.title}
+          src={imageError ? '/default-recipe-image.jpg' : recipe.image}
+          alt={DOMPurify.sanitize(recipe.title)}
+          onError={handleImageError}
           style={{
             width: '100%',
             height: '100%',
@@ -170,7 +178,7 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
       </div>
       <div style={{ padding: '1.5rem' }}>
         <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', color: '#333' }}>
-          {recipe.title}
+          {DOMPurify.sanitize(recipe.title)}
         </h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <span style={{
@@ -561,6 +569,60 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, shareOptions
   );
 };
 
+// Add new validation utilities
+const validateRecipe = (recipe) => {
+  const errors = {};
+  if (!recipe.title || recipe.title.length < 3) {
+    errors.title = 'Title must be at least 3 characters long';
+  }
+  if (!recipe.ingredients || recipe.ingredients.length < 10) {
+    errors.ingredients = 'Ingredients must be at least 10 characters long';
+  }
+  if (!recipe.instructions || recipe.instructions.length < 10) {
+    errors.instructions = 'Instructions must be at least 10 characters long';
+  }
+  if (!recipe.prepTime || isNaN(recipe.prepTime) || recipe.prepTime < 1) {
+    errors.prepTime = 'Preparation time must be a positive number';
+  }
+  if (!recipe.category) {
+    errors.category = 'Category is required';
+  }
+  return errors;
+};
+
+const sanitizeRecipe = (recipe) => {
+  return {
+    ...recipe,
+    title: DOMPurify.sanitize(recipe.title),
+    description: DOMPurify.sanitize(recipe.description),
+    ingredients: DOMPurify.sanitize(recipe.ingredients),
+    instructions: DOMPurify.sanitize(recipe.instructions)
+  };
+};
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <h1>Something went wrong. Please refresh the page.</h1>;
+    }
+    return this.props.children;
+  }
+}
+
 const Dashboard = () => {
   // State management
   const [recipes, setRecipes] = useState([]);
@@ -634,7 +696,7 @@ const Dashboard = () => {
           case 'recent':
             return new Date(b.createdAt) - new Date(a.createdAt);
           case 'quick':
-            return a.prepTime - b.prepTime;
+            return parseInt(a.prepTime) - parseInt(b.prepTime);
           case 'alpha':
             return a.title.localeCompare(b.title);
           default:
@@ -654,10 +716,25 @@ const Dashboard = () => {
   // Handle form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    
+    // Validate form data
+    const errors = validateRecipe(formData);
+    if (Object.keys(errors).length > 0) {
+      Object.values(errors).forEach(error => toast.error(error));
+      return;
+    }
+
     try {
       setLoading(prev => ({ ...prev, create: true }));
-      const newRecipe = await createRecipe(formData);
-      setRecipes(prev => [...prev, newRecipe]);
+      const sanitizedData = sanitizeRecipe(formData);
+
+      // Handle creation
+      const newRecipe = await createRecipe({
+        ...sanitizedData,
+        userId: localStorage.getItem('userId')
+      });
+      
+      setRecipes(prev => [newRecipe, ...prev]);
       setShowForm(false);
       setFormData({
         title: '',
@@ -670,8 +747,18 @@ const Dashboard = () => {
       });
       toast.success('Recipe created successfully');
     } catch (error) {
-      toast.error('Failed to create recipe');
       console.error('Error creating recipe:', error);
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        toast.error(`Failed to create recipe: ${error.response.data.error || error.response.data.message || 'Unknown error'}`);
+      } else if (error.request) {
+        // The request was made but no response was received
+        toast.error('No response from server. Please check your connection.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        toast.error('Error creating recipe. Please try again.');
+      }
     } finally {
       setLoading(prev => ({ ...prev, create: false }));
     }
@@ -752,316 +839,559 @@ const Dashboard = () => {
     setShowSortDropdown(false);
   }, []);
 
+  // Add file upload handling
+  const handleImageUpload = useCallback((e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFormData(prev => ({
+          ...prev,
+          image: e.target.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  // Add pagination
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 12;
+
+  const paginatedRecipes = useMemo(() => {
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
+    return filteredAndSortedRecipes.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredAndSortedRecipes, page]);
+
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Search and Filter Section */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => debouncedSearch(e.target.value)}
-              placeholder="Search recipes..."
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem 0.75rem 2.5rem',
-                borderRadius: '8px',
-                border: '1px solid #ddd',
-                fontSize: '1rem'
-              }}
-              aria-label="Search recipes"
-            />
-            <FaSearch style={{
-              position: 'absolute',
-              left: '1rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#666'
-            }} />
-          </div>
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+    <ErrorBoundary>
+      <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Search and Filter Section */}
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => debouncedSearch(e.target.value)}
+                placeholder="Search recipes..."
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem 0.75rem 2.5rem',
+                  borderRadius: '8px',
+                  border: '1px solid #ddd',
+                  fontSize: '1rem'
+                }}
+                aria-label="Search recipes"
+              />
+              <FaSearch style={{
+                position: 'absolute',
+                left: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#666'
+              }} />
+            </div>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+                aria-expanded={showCategoryDropdown}
+                aria-controls="category-dropdown"
+              >
+                <FaFilter /> Filter
+              </button>
+              {showCategoryDropdown && (
+                <div
+                  id="category-dropdown"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '0.5rem',
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    padding: '1rem',
+                    zIndex: 1000,
+                    minWidth: '200px'
+                  }}
+                >
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#333' }}>Categories</h3>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => handleCategorySelect(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        borderRadius: '4px',
+                        border: '1px solid #ddd'
+                      }}
+                      aria-label="Select category"
+                    >
+                      <option value="all">All Categories</option>
+                      {Object.entries(RECIPE_CATEGORIES).map(([mainCategory, subCategories]) => (
+                        <optgroup key={mainCategory} label={mainCategory}>
+                          {subCategories.map(category => (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => handleCategorySelect('all')}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      backgroundColor: '#f8f9fa',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+            </div>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+                aria-expanded={showSortDropdown}
+                aria-controls="sort-dropdown"
+              >
+                <FaSort /> Sort
+              </button>
+              {showSortDropdown && (
+                <div
+                  id="sort-dropdown"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '0.5rem',
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    padding: '1rem',
+                    zIndex: 1000,
+                    minWidth: '200px'
+                  }}
+                >
+                  {SORT_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleSortSelect(option.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        backgroundColor: sortBy === option.value ? '#e67e22' : '#f8f9fa',
+                        color: sortBy === option.value ? 'white' : '#333',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        marginBottom: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      {option.icon}
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowForm(true)}
               style={{
                 padding: '0.75rem 1.5rem',
-                backgroundColor: '#f8f9fa',
-                border: '1px solid #ddd',
+                backgroundColor: '#e67e22',
+                color: 'white',
+                border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem'
               }}
-              aria-expanded={showCategoryDropdown}
-              aria-controls="category-dropdown"
             >
-              <FaFilter /> Filter
+              <FaPlus /> Add Recipe
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Recipe Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: '2rem'
+        }}>
+          {loading.fetch ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
+              <FaSpinner className="animate-spin" size={40} color="#e67e22" />
+            </div>
+          ) : (
+            <AnimatePresence>
+              {paginatedRecipes.map(recipe => (
+                <RecipeCard
+                  key={recipe._id}
+                  recipe={recipe}
+                  onSelect={() => setSelectedRecipe(recipe)}
+                  onDelete={() => handleDelete(recipe._id)}
+                  onRate={(rating) => handleRateRecipe(recipe._id, rating)}
+                />
+              ))}
+            </AnimatePresence>
+          )}
+        </div>
+
+        {/* Pagination Controls */}
+        {filteredAndSortedRecipes.length > ITEMS_PER_PAGE && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: '1rem', 
+            marginTop: '2rem',
+            alignItems: 'center' 
+          }}>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              style={{
+                padding: '0.5rem 1rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                cursor: page === 1 ? 'not-allowed' : 'pointer',
+                opacity: page === 1 ? 0.5 : 1
+              }}
+              aria-label="Previous page"
+            >
+              Previous
             </button>
-            {showCategoryDropdown && (
-              <div
-                id="category-dropdown"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '0.5rem',
-                  backgroundColor: 'white',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  padding: '1rem',
-                  zIndex: 1000,
-                  minWidth: '200px'
-                }}
-              >
+            <span>Page {page} of {Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE)}</span>
+            <button
+              onClick={() => setPage(p => Math.min(Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE), p + 1))}
+              disabled={page >= Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE)}
+              style={{
+                padding: '0.5rem 1rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                cursor: page >= Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer',
+                opacity: page >= Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE) ? 0.5 : 1
+              }}
+              aria-label="Next page"
+            >
+              Next
+            </button>
+          </div>
+        )}
+        
+        {/* Recipe Modal */}
+        {selectedRecipe && (
+          <RecipeModal
+            recipe={selectedRecipe}
+            onClose={() => setSelectedRecipe(null)}
+            onDelete={() => handleDelete(selectedRecipe._id)}
+            onUpdate={(updatedData) => handleUpdate(selectedRecipe._id, updatedData)}
+            onRate={(rating) => handleRateRecipe(selectedRecipe._id, rating)}
+            
+            showQRCode={showQRCode}
+            onQRCodeClose={() => setShowQRCode(false)}
+            copySuccess={copySuccess}
+          />
+        )}
+
+        {/* Add/Edit Recipe Form */}
+        {showForm && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '600px',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}>
+              <h2 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>
+                {selectedRecipe ? 'Edit Recipe' : 'Add New Recipe'}
+              </h2>
+              <form onSubmit={handleSubmit}>
+                {/* Title Field */}
                 <div style={{ marginBottom: '1rem' }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#333' }}>Categories</h3>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => handleCategorySelect(e.target.value)}
+                  <label htmlFor="title" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
+                    Title*
+                  </label>
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Enter recipe title"
                     style={{
                       width: '100%',
-                      padding: '0.5rem',
-                      borderRadius: '4px',
-                      border: '1px solid #ddd'
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd',
+                      fontSize: '1rem'
                     }}
-                    aria-label="Select category"
+                  />
+                </div>
+
+                {/* Description Field */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label htmlFor="description" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
+                    Description
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Enter recipe description"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd',
+                      fontSize: '1rem',
+                      minHeight: '100px',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                {/* Ingredients Field */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label htmlFor="ingredients" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
+                    Ingredients* (one per line)
+                  </label>
+                  <textarea
+                    id="ingredients"
+                    name="ingredients"
+                    value={formData.ingredients}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Enter ingredients (one per line)"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd',
+                      fontSize: '1rem',
+                      minHeight: '150px',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                {/* Instructions Field */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label htmlFor="instructions" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
+                    Instructions* (one step per line)
+                  </label>
+                  <textarea
+                    id="instructions"
+                    name="instructions"
+                    value={formData.instructions}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Enter cooking instructions (one step per line)"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd',
+                      fontSize: '1rem',
+                      minHeight: '150px',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                {/* Category Field */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label htmlFor="category" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
+                    Category*
+                  </label>
+                  <select
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd',
+                      fontSize: '1rem',
+                      backgroundColor: 'white'
+                    }}
                   >
-                    <option value="all">All Categories</option>
-                    {Object.entries(RECIPE_CATEGORIES).map(([mainCategory, subCategories]) => (
-                      <optgroup key={mainCategory} label={mainCategory}>
-                        {subCategories.map(category => (
-                          <option key={category} value={category}>
-                            {category}
+                    <option value="">Select a category</option>
+                    {Object.entries(RECIPE_CATEGORIES).map(([group, { label, options }]) => (
+                      <optgroup key={group} label={label}>
+                        {options.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
                           </option>
                         ))}
                       </optgroup>
                     ))}
                   </select>
                 </div>
-                <button
-                  onClick={() => handleCategorySelect('all')}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    backgroundColor: '#f8f9fa',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
-          </div>
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setShowSortDropdown(!showSortDropdown)}
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#f8f9fa',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-              aria-expanded={showSortDropdown}
-              aria-controls="sort-dropdown"
-            >
-              <FaSort /> Sort
-            </button>
-            {showSortDropdown && (
-              <div
-                id="sort-dropdown"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '0.5rem',
-                  backgroundColor: 'white',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  padding: '1rem',
-                  zIndex: 1000,
-                  minWidth: '200px'
-                }}
-              >
-                {SORT_OPTIONS.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => handleSortSelect(option.value)}
+
+                {/* Prep Time Field */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label htmlFor="prepTime" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
+                    Preparation Time* (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    id="prepTime"
+                    name="prepTime"
+                    value={formData.prepTime}
+                    onChange={handleInputChange}
+                    required
+                    min="1"
+                    placeholder="Enter preparation time in minutes"
                     style={{
                       width: '100%',
-                      padding: '0.5rem',
-                      backgroundColor: sortBy === option.value ? '#e67e22' : '#f8f9fa',
-                      color: sortBy === option.value ? 'white' : '#333',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
                       border: '1px solid #ddd',
-                      borderRadius: '4px',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+
+                {/* Image Upload Field */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <label htmlFor="image" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
+                    Recipe Image
+                  </label>
+                  <input
+                    type="file"
+                    id="image"
+                    name="image"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd',
+                      fontSize: '1rem'
+                    }}
+                  />
+                  {formData.image && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <img
+                        src={formData.image}
+                        alt="Recipe preview"
+                        style={{
+                          width: '100%',
+                          maxHeight: '200px',
+                          objectFit: 'cover',
+                          borderRadius: '8px'
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#f8f9fa',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading.create || loading.update}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#e67e22',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
                       cursor: 'pointer',
-                      marginBottom: '0.5rem',
+                      opacity: (loading.create || loading.update) ? 0.7 : 1,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem'
                     }}
                   >
-                    {option.icon}
-                    {option.label}
+                    {loading.create || loading.update ? (
+                      <>
+                        <FaSpinner className="animate-spin" />
+                        {selectedRecipe ? 'Updating...' : 'Creating...'}
+                      </>
+                    ) : (
+                      <>
+                        <FaSave />
+                        {selectedRecipe ? 'Update Recipe' : 'Create Recipe'}
+                      </>
+                    )}
                   </button>
-                ))}
-              </div>
-            )}
+                </div>
+              </form>
+            </div>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowForm(true)}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: '#e67e22',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <FaPlus /> Add Recipe
-          </motion.button>
-        </div>
-      </div>
-
-      {/* Recipe Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '2rem'
-      }}>
-        {loading.fetch ? (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
-            <FaSpinner className="animate-spin" size={40} color="#e67e22" />
-          </div>
-        ) : (
-          <AnimatePresence>
-            {filteredAndSortedRecipes.map(recipe => (
-              <RecipeCard
-                key={recipe._id}
-                recipe={recipe}
-                onSelect={() => setSelectedRecipe(recipe)}
-                onDelete={() => handleDelete(recipe._id)}
-                onRate={(rating) => handleRateRecipe(recipe._id, rating)}
-              />
-            ))}
-          </AnimatePresence>
         )}
+
+        {/* ...rest of the existing dashboard code... */}
       </div>
-
-      {/* Recipe Modal */}
-      {selectedRecipe && (
-        <RecipeModal
-          recipe={selectedRecipe}
-          onClose={() => setSelectedRecipe(null)}
-          onDelete={() => handleDelete(selectedRecipe._id)}
-          onUpdate={(updatedData) => handleUpdate(selectedRecipe._id, updatedData)}
-          onRate={(rating) => handleRateRecipe(selectedRecipe._id, rating)}
-          shareOptions={shareOptions}
-          showQRCode={showQRCode}
-          onQRCodeClose={() => setShowQRCode(false)}
-          copySuccess={copySuccess}
-        />
-      )}
-
-      {/* Add/Edit Recipe Form */}
-      {showForm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '600px',
-            maxHeight: '90vh',
-            overflowY: 'auto'
-          }}>
-            <h2 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>
-              {selectedRecipe ? 'Edit Recipe' : 'Add New Recipe'}
-            </h2>
-            <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label htmlFor="title" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
-                  Title
-                </label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #ddd',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-              {/* Add more form fields here */}
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#f8f9fa',
-                    border: '1px solid #ddd',
-                    borderRadius: '8px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading.create || loading.update}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#e67e22',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    opacity: (loading.create || loading.update) ? 0.7 : 1
-                  }}
-                >
-                  {loading.create || loading.update ? (
-                    <FaSpinner className="animate-spin" />
-                  ) : (
-                    selectedRecipe ? 'Update Recipe' : 'Add Recipe'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+    </ErrorBoundary>
   );
 };
 
