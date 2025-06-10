@@ -1,2 +1,7 @@
-.DS_Store
-server/uploads/
+
+
+# Ignore all files in server/uploads/
+server/uploads/*
+
+# But do NOT ignore .gitkeep
+!server/uploads/.gitkeep
