@@ -24,7 +24,7 @@ if (!fs.existsSync(uploadsDir)) {
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Multer for file uploads
 const storage = multer.diskStorage({
@@ -218,15 +218,23 @@ app.get('/api/external-recipes/:id', async (req, res) => {
 // Custom Recipes CRUD Routes
 app.post('/api/recipes', authenticateJWT, upload.single('image'), async (req, res) => {
   try {
+    const imagePath = req.file ? `/uploads/${path.basename(req.file.path)}` : '';
     const recipe = new Recipe({
       title: req.body.title,
       ingredients: req.body.ingredients,
       instructions: req.body.instructions,
-      image: req.file ? req.file.path : '',
+      image: imagePath,
       userId: req.user.id,
+      category: req.body.category,
+      prepTime: req.body.prepTime,
+      description: req.body.description,
     });
     await recipe.save();
-    res.status(201).json({ message: 'Recipe created successfully', recipe });
+    const populatedRecipe = { 
+      ...recipe.toObject(), 
+      image: imagePath ? `${req.protocol}://${req.get('host')}${imagePath}` : '' 
+    };
+    res.status(201).json({ message: 'Recipe created successfully', recipe: populatedRecipe });
   } catch (error) {
     console.error('Recipe creation error:', error);
     res.status(500).json({ error: 'Failed to create recipe', details: error.message });
@@ -239,13 +247,21 @@ app.get('/api/recipes', async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const [recipes, total] = await Promise.all([
+    const [recipeDocs, total] = await Promise.all([
       Recipe.find()
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 }),
       Recipe.countDocuments()
     ]);
+
+    const recipes = recipeDocs.map(recipe => {
+      const recipeObj = recipe.toObject();
+      if (recipeObj.image) {
+        recipeObj.image = `${req.protocol}://${req.get('host')}${recipeObj.image}`;
+      }
+      return recipeObj;
+    });
 
     res.json({
       recipes,
@@ -278,15 +294,36 @@ app.put('/api/recipes/:id', authenticateJWT, upload.single('image'), async (req,
       return res.status(404).json({ error: 'Recipe not found or not authorized' });
     }
 
+    // Update basic fields
     recipe.title = req.body.title || recipe.title;
     recipe.ingredients = req.body.ingredients || recipe.ingredients;
     recipe.instructions = req.body.instructions || recipe.instructions;
+    recipe.category = req.body.category || recipe.category;
+    recipe.prepTime = req.body.prepTime || recipe.prepTime;
+    recipe.description = req.body.description || recipe.description;
+
+    // Handle image update
     if (req.file) {
-      recipe.image = req.file.path;
+      // Delete old image if it exists
+      if (recipe.image) {
+        const oldImagePath = path.join(__dirname, recipe.image);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      // Store new image path
+      recipe.image = `/uploads/${path.basename(req.file.path)}`;
     }
     
     await recipe.save();
-    res.json({ message: 'Recipe updated successfully', recipe });
+    
+    // Create populated recipe object with full image URL
+    const populatedRecipe = {
+      ...recipe.toObject(),
+      image: recipe.image ? `${req.protocol}://${req.get('host')}${recipe.image}` : ''
+    };
+    
+    res.json({ message: 'Recipe updated successfully', recipe: populatedRecipe });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update recipe', details: error.message });
   }
