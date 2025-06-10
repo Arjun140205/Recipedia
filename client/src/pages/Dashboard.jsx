@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify';
 import { createRecipe, getRecipes, deleteRecipe, updateRecipe } from '../services/recipeService';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTimes, FaUtensils, FaEdit, FaSpinner, FaSearch, FaFilter, FaSort, FaSave, FaStar, FaRegStar, FaStarHalfAlt, FaFire, FaClock, FaShare, FaBookmark, FaPrint, FaList, FaChartLine, FaLink, FaFacebook, FaTwitter, FaWhatsapp, FaPinterest, FaEnvelope, FaCopy, FaInstagram, FaQrcode, FaLinkedin, FaReddit, FaTelegram, FaDownload, FaInfoCircle, FaCircle } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaUtensils, FaSpinner, FaSearch, FaFilter, FaSort, FaSave, FaStar, FaRegStar, FaStarHalfAlt, FaFire, FaClock, FaShare, FaPrint, FaList, FaChartLine, FaFacebook, FaTwitter, FaWhatsapp, FaCopy, FaQrcode, FaCircle } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 
 const RECIPE_CATEGORIES = {
@@ -195,6 +195,12 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
             <span>{recipe.popularity}</span>
           </div>
         </div>
+        <StarRating 
+          rating={recipe.popularity}
+          onRate={(rating) => onRate(rating)}
+          interactive={true}
+          size="1.2rem"
+        />
       </div>
     </motion.div>
   );
@@ -238,9 +244,68 @@ const SharePreview = ({ recipe }) => {
   );
 };
 
-const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, shareOptions, showQRCode, onQRCodeClose, copySuccess }) => {
+const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, onQRCodeClose }) => {
   const [activeTab, setActiveTab] = useState('ingredients');
   const [showShareOptions, setShowShareOptions] = useState(false);
+
+  // Add safety check for recipe
+  if (!recipe) {
+    return null;
+  }
+
+  // Share options with their actions
+  const shareOptions = [
+    {
+      name: 'Copy Link',
+      icon: <FaCopy />,
+      action: () => {
+        navigator.clipboard.writeText(window.location.href);
+        toast.success('Link copied to clipboard!');
+      }
+    },
+    {
+      name: 'Facebook',
+      icon: <FaFacebook />,
+      action: () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${window.location.href}`, '_blank')
+    },
+    {
+      name: 'Twitter',
+      icon: <FaTwitter />,
+      action: () => window.open(`https://twitter.com/intent/tweet?url=${window.location.href}`, '_blank')
+    },
+    {
+      name: 'WhatsApp',
+      icon: <FaWhatsapp />,
+      action: () => window.open(`https://api.whatsapp.com/send?text=${window.location.href}`, '_blank')
+    },
+    {
+      name: 'QR Code',
+      icon: <FaQrcode />,
+      action: () => onQRCodeClose()
+    }
+  ];
+
+  // Process ingredients and instructions with safety checks
+  const ingredientsList = recipe.ingredients ? recipe.ingredients.split('\n').filter(Boolean) : [];
+  const instructionsList = recipe.instructions ? recipe.instructions.split('\n').filter(Boolean) : [];
+
+  // Add star rating display
+  const StarDisplay = () => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <FaStar
+          key={star}
+          color={star <= (recipe.popularity || 0) ? '#FFD700' : '#ddd'}
+          size={24}
+          style={{ cursor: 'pointer' }}
+          onClick={() => onRate(star)}
+        />
+      ))}
+      <span style={{ marginLeft: '0.5rem', fontSize: '1.2rem' }}>
+        {(recipe.popularity || 0).toFixed(1)}
+      </span>
+    </div>
+  );
 
   return (
     <div style={{
@@ -249,11 +314,13 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, shareOptions
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'rgba(0,0,0,0.7)',
       display: 'flex',
-      alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000
+      alignItems: 'center',
+      zIndex: 1000,
+      backdropFilter: 'blur(5px)',
+      WebkitBackdropFilter: 'blur(5px)'
     }}>
       <div style={{
         backgroundColor: 'white',
@@ -401,80 +468,42 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, shareOptions
           {activeTab === 'ingredients' && (
             <div>
               <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>Ingredients</h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {recipe.ingredients.split('\n').map((ingredient, index) => (
-                  <li key={index} style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FaCircle size={8} color="#e67e22" />
-                    {ingredient}
-                  </li>
-                ))}
-              </ul>
+              {ingredientsList.length > 0 ? (
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {ingredientsList.map((ingredient, index) => (
+                    <li key={index} style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <FaCircle size={8} color="#e67e22" />
+                      {ingredient}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ color: '#666' }}>No ingredients available</p>
+              )}
             </div>
           )}
 
           {activeTab === 'instructions' && (
             <div>
               <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>Instructions</h3>
-              <ol style={{ padding: 0, margin: 0, listStylePosition: 'inside' }}>
-                {recipe.instructions.split('\n').map((instruction, index) => (
-                  <li key={index} style={{ marginBottom: '1rem', color: '#666' }}>
-                    {instruction}
-                  </li>
-                ))}
-              </ol>
+              {instructionsList.length > 0 ? (
+                <ol style={{ padding: 0, margin: 0, listStylePosition: 'inside' }}>
+                  {instructionsList.map((instruction, index) => (
+                    <li key={index} style={{ marginBottom: '1rem', color: '#666' }}>
+                      {instruction}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p style={{ color: '#666' }}>No instructions available</p>
+              )}
             </div>
           )}
 
           {activeTab === 'popularity' && (
             <div>
-              <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>Popularity</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <FaStar color="#FFD700" size={24} />
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{recipe.popularity}</span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        onClick={() => onRate(star)}
-                        style={{
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '0.25rem'
-                        }}
-                      >
-                        <FaStar
-                          color={star <= recipe.popularity ? '#FFD700' : '#ddd'}
-                          size={20}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div style={{ marginTop: '2rem' }}>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>Rating Distribution</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {[5, 4, 3, 2, 1].map((rating) => (
-                    <div key={rating} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <span style={{ width: '1rem', textAlign: 'right' }}>{rating}</span>
-                      <div style={{ flex: 1, height: '1rem', backgroundColor: '#f8f9fa', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                        <div
-                          style={{
-                            width: `${(rating === 5 ? 60 : rating === 4 ? 20 : rating === 3 ? 10 : rating === 2 ? 5 : 5)}%`,
-                            height: '100%',
-                            backgroundColor: '#e67e22',
-                            borderRadius: '0.5rem'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>Rate this Recipe</h3>
+              <StarDisplay />
             </div>
           )}
         </div>
@@ -640,7 +669,7 @@ const Dashboard = () => {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
+  const [showShareOptions, setShowShareOptions] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -727,14 +756,27 @@ const Dashboard = () => {
     try {
       setLoading(prev => ({ ...prev, create: true }));
       const sanitizedData = sanitizeRecipe(formData);
-
-      // Handle creation
-      const newRecipe = await createRecipe({
-        ...sanitizedData,
-        userId: localStorage.getItem('userId')
-      });
       
-      setRecipes(prev => [newRecipe, ...prev]);
+      if (selectedRecipe) {
+        // Handle update
+        const updatedRecipe = await updateRecipe(selectedRecipe._id, sanitizedData);
+        setRecipes(prev => prev.map(recipe => 
+          recipe._id === selectedRecipe._id ? updatedRecipe : recipe
+        ));
+        setSelectedRecipe(null);
+        toast.success('Recipe updated successfully');
+      } else {
+        // Handle creation
+        const newRecipe = await createRecipe({
+          ...sanitizedData,
+          userId: localStorage.getItem('userId')
+        });
+        
+        setRecipes(prev => [newRecipe, ...prev]);
+        toast.success('Recipe created successfully');
+      }
+      
+      // Reset form
       setShowForm(false);
       setFormData({
         title: '',
@@ -745,24 +787,13 @@ const Dashboard = () => {
         category: '',
         image: ''
       });
-      toast.success('Recipe created successfully');
     } catch (error) {
-      console.error('Error creating recipe:', error);
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        toast.error(`Failed to create recipe: ${error.response.data.error || error.response.data.message || 'Unknown error'}`);
-      } else if (error.request) {
-        // The request was made but no response was received
-        toast.error('No response from server. Please check your connection.');
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        toast.error('Error creating recipe. Please try again.');
-      }
+      console.error('Error saving recipe:', error);
+      toast.error(error.response?.data?.error || 'Failed to save recipe');
     } finally {
       setLoading(prev => ({ ...prev, create: false }));
     }
-  }, [formData]);
+  }, [formData, selectedRecipe]);
 
   // Handle form input changes
   const handleInputChange = useCallback((e) => {
@@ -823,9 +854,8 @@ const Dashboard = () => {
   }, []);
 
   // Handle image load
-  const handleImageLoad = useCallback((e) => {
-    e.target.style.opacity = 1;
-  }, []);
+  // Using the onLoad property directly in the image element instead
+  // of a separate handler for better performance
 
   // Handle category selection
   const handleCategorySelect = useCallback((category) => {
@@ -1124,7 +1154,6 @@ const Dashboard = () => {
             
             showQRCode={showQRCode}
             onQRCodeClose={() => setShowQRCode(false)}
-            copySuccess={copySuccess}
           />
         )}
 
