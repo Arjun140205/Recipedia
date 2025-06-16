@@ -39,10 +39,9 @@ const Navbar = () => {
     top: 0,
     zIndex: 1000,
     padding: '1rem',
-    backdropFilter: 'blur(10px)',
-    background: 'rgba(255, 255, 255, 0.75)',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-    transition: 'all 0.3s ease',
+    background: '#ffffff',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+    borderBottom: '1px solid #f0f0f0',
   };
 
   const containerStyle = {
@@ -55,81 +54,39 @@ const Navbar = () => {
   };
 
   const logoStyle = {
-    fontSize: '1.7rem',
-    fontWeight: 'bold',
-    color: '#e67e22',
+    fontSize: '1.5rem',
+    fontWeight: '600',
+    color: '#1a1a1a',
     textDecoration: 'none',
-    transition: 'transform 0.3s ease',
+    letterSpacing: '-0.5px',
   };
 
   const navLinkStyle = {
     position: 'relative',
-    fontWeight: 500,
+    fontWeight: '500',
     textDecoration: 'none',
-    color: '#333',
+    color: '#4a4a4a',
     padding: '0.5rem',
-    transition: 'all 0.3s ease',
-    display: 'inline-block',
+    fontSize: '0.95rem',
+    transition: 'color 0.2s ease',
   };
 
   const buttonBase = {
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '6px',
     padding: '0.5rem 1.2rem',
-    fontWeight: '600',
+    fontWeight: '500',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    transform: 'translateZ(0)',
-    backfaceVisibility: 'hidden',
+    fontSize: '0.95rem',
+    transition: 'background-color 0.2s ease',
   };
 
   const hoverIn = (e) => {
     e.currentTarget.style.color = '#e67e22';
-    e.currentTarget.style.transform = 'scale(1.05)';
-    underlineEffect(e, true);
   };
 
   const hoverOut = (e) => {
-    e.currentTarget.style.color = '#333';
-    e.currentTarget.style.transform = 'scale(1)';
-    underlineEffect(e, false);
-  };
-
-  const underlineEffect = (e, show) => {
-    let bar = e.currentTarget.querySelector('.underline-bar');
-    if (!bar && show) {
-      bar = document.createElement('span');
-      bar.className = 'underline-bar';
-      Object.assign(bar.style, {
-        position: 'absolute',
-        bottom: '0',
-        left: '0',
-        width: '100%',
-        height: '2px',
-        backgroundColor: '#e67e22',
-        transform: 'scaleX(0)',
-        transformOrigin: 'left',
-        transition: 'transform 0.3s ease',
-        display: 'block',
-      });
-      e.currentTarget.appendChild(bar);
-      requestAnimationFrame(() => {
-        bar.style.transform = 'scaleX(1)';
-      });
-    } else if (bar && !show) {
-      bar.style.transform = 'scaleX(0)';
-      setTimeout(() => bar.remove(), 300);
-    }
-  };
-
-  const liquidHover = (e) => {
-    e.currentTarget.style.transform = 'scale(1.05)';
-    e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.1)';
-  };
-
-  const liquidOut = (e) => {
-    e.currentTarget.style.transform = 'scale(1)';
-    e.currentTarget.style.boxShadow = 'none';
+    e.currentTarget.style.color = '#4a4a4a';
   };
 
   const menuIconStyle = {
@@ -157,8 +114,8 @@ const Navbar = () => {
         <Link
           to="/"
           style={logoStyle}
-          onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-          onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          onMouseOver={(e) => (e.currentTarget.style.color = '#e67e22')}
+          onMouseOut={(e) => (e.currentTarget.style.color = '#1a1a1a')}
         >
           Recipe Finder
         </Link>
@@ -180,6 +137,15 @@ const Navbar = () => {
             Home
           </Link>
 
+          <Link
+            to="/about"
+            style={navLinkStyle}
+            onMouseOver={hoverIn}
+            onMouseOut={hoverOut}
+          >
+            Our Story
+          </Link>
+
           {isAuthenticated ? (
             <>
               <Link
@@ -194,11 +160,11 @@ const Navbar = () => {
                 onClick={handleLogout}
                 style={{
                   ...buttonBase,
-                  backgroundColor: '#e74c3c',
+                  backgroundColor: '#ff4757',
                   color: '#fff',
                 }}
-                onMouseOver={liquidHover}
-                onMouseOut={liquidOut}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ff6b81'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ff4757'}
               >
                 Logout
               </button>
@@ -222,8 +188,8 @@ const Navbar = () => {
                   textDecoration: 'none',
                   display: 'inline-block',
                 }}
-                onMouseOver={liquidHover}
-                onMouseOut={liquidOut}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f39c12'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e67e22'}
               >
                 Sign Up
               </Link>
