@@ -4,7 +4,31 @@ import DOMPurify from 'dompurify';
 import { createRecipe, getRecipes, deleteRecipe, updateRecipe } from '../services/recipeService';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTimes, FaUtensils, FaSpinner, FaSearch, FaFilter, FaSort, FaSave, FaStar, FaRegStar, FaStarHalfAlt, FaFire, FaClock, FaShare, FaPrint, FaList, FaChartLine, FaFacebook, FaTwitter, FaWhatsapp, FaCopy, FaQrcode, FaCircle } from 'react-icons/fa';
+import { 
+  FaPlus, 
+  FaTimes, 
+  FaUtensils, 
+  FaSpinner, 
+  FaSearch, 
+  FaFilter, 
+  FaSort, 
+  FaSave, 
+  FaStar, 
+  FaRegStar, 
+  FaStarHalfAlt, 
+  FaFire, 
+  FaClock,
+  FaShare,
+  FaPrint,
+  FaList,
+  FaChartLine,
+  FaFacebook,
+  FaTwitter,
+  FaWhatsapp,
+  FaCopy,
+  FaQrcode,
+  FaCircle
+} from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 
 const RECIPE_CATEGORIES = {
@@ -746,8 +770,13 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Utility function to generate unique keys for recipes
+const generateUniqueKey = (recipe, index, prefix = 'recipe') => {
+  const id = recipe._id || recipe.id || `temp-${Date.now()}-${Math.random()}`;
+  return `${prefix}-${id}-${index}`;
+};
+
 const Dashboard = () => {
-  // State management
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState({
     fetch: false,
@@ -755,15 +784,23 @@ const Dashboard = () => {
     update: false,
     delete: false
   });
+  const [showModal, setShowModal] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('recent');
+  const [sortOption, setSortOption] = useState('recent');
+  const [userIngredients, setUserIngredients] = useState([]);
+  const [filters, setFilters] = useState({
+    vegetarian: false,
+    vegan: false,
+    glutenFree: false,
+    maxPrepTime: null,
+    difficulty: null
+  });
   const [showForm, setShowForm] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
-  const [showShareOptions, setShowShareOptions] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -795,14 +832,14 @@ const Dashboard = () => {
   // Accessibility: Focus management
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && (showForm || selectedRecipe)) {
-        setShowForm(false);
+      if (e.key === 'Escape' && (showModal || selectedRecipe)) {
+        setShowModal(false);
         setSelectedRecipe(null);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showForm, selectedRecipe]);
+  }, [showModal, selectedRecipe]);
 
   // Performance optimization: Memoize filtered and sorted recipes
   const filteredAndSortedRecipes = useMemo(() => {
@@ -813,7 +850,7 @@ const Dashboard = () => {
         return matchesSearch && matchesCategory;
       })
       .sort((a, b) => {
-        switch (sortBy) {
+        switch (sortOption) {
           case 'popular':
             return b.popularity - a.popularity;
           case 'recent':
@@ -826,7 +863,7 @@ const Dashboard = () => {
             return 0;
         }
       });
-  }, [recipes, searchQuery, selectedCategory, sortBy]);
+  }, [recipes, searchQuery, selectedCategory, sortOption]);
 
   // Performance optimization: Debounced search
   const debouncedSearch = useCallback((value) => {
@@ -959,7 +996,7 @@ const Dashboard = () => {
 
   // Handle sort selection
   const handleSortSelect = useCallback((sort) => {
-    setSortBy(sort);
+    setSortOption(sort);
     setShowSortDropdown(false);
   }, []);
 
@@ -986,6 +1023,57 @@ const Dashboard = () => {
     const startIndex = (page - 1) * ITEMS_PER_PAGE;
     return filteredAndSortedRecipes.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAndSortedRecipes, page]);
+
+  const handleIngredientsUpdate = async (ingredients) => {
+    setUserIngredients(ingredients);
+    
+    try {
+      // Save ingredients to user's pantry
+      const response = await fetch('/api/user/pantry', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token')
+        },
+        body: JSON.stringify({ ingredients })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update pantry');
+      }
+
+      // Find matching recipes
+      const matchResponse = await fetch('/api/recipes/match', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token')
+        },
+        body: JSON.stringify({
+          ingredients: ingredients.map(ing => ing.name),
+          filters,
+          minMatch: 60
+        })
+      });
+
+      if (!matchResponse.ok) {
+        throw new Error('Failed to find matching recipes');
+      }
+
+      const matchedRecipes = await matchResponse.json();
+      setRecipes(matchedRecipes);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to update ingredients or find matches');
+    }
+  };
+
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: value
+    }));
+  };
 
   return (
     <ErrorBoundary>
@@ -1120,10 +1208,10 @@ const Dashboard = () => {
                     >
                       <option value="all">All Categories</option>
                       {Object.entries(RECIPE_CATEGORIES).map(([mainCategory, subCategories]) => (
-                        <optgroup key={mainCategory} label={mainCategory}>
-                          {subCategories.map(category => (
-                            <option key={category} value={category}>
-                              {category}
+                        <optgroup key={mainCategory} label={subCategories.label}>
+                          {subCategories.options.map(category => (
+                            <option key={`${mainCategory}-${category.value}`} value={category.value}>
+                              {category.label}
                             </option>
                           ))}
                         </optgroup>
@@ -1187,8 +1275,8 @@ const Dashboard = () => {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: sortBy === option.value ? '#e67e22' : '#f8f9fa',
-                        color: sortBy === option.value ? 'white' : '#333',
+                        backgroundColor: sortOption === option.value ? '#e67e22' : '#f8f9fa',
+                        color: sortOption === option.value ? 'white' : '#333',
                         border: '1px solid #ddd',
                         borderRadius: '4px',
                         cursor: 'pointer',
@@ -1219,10 +1307,10 @@ const Dashboard = () => {
               <FaSpinner className="animate-spin" size={40} color="#e67e22" />
             </div>
           ) : (
-            <AnimatePresence>
-              {paginatedRecipes.map(recipe => (
+            <AnimatePresence mode="wait">
+              {paginatedRecipes.map((recipe, index) => (
                 <motion.div
-                  key={recipe._id}
+                  key={generateUniqueKey(recipe, index, 'main')}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
@@ -1585,7 +1673,90 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* ...rest of the existing dashboard code... */}
+        <div style={{ marginTop: '2rem' }}>
+          <h2 style={{ fontSize: '1.5rem', color: '#2c3e50', marginBottom: '1rem' }}>
+            Your Recipe Matches
+          </h2>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '20px',
+            padding: '20px 0'
+          }}>
+            {loading.fetch ? (
+              <div style={{ textAlign: 'center', padding: '40px', gridColumn: '1 / -1' }}>
+                <FaSpinner className="spinner" size={40} style={{ color: '#e67e22' }} />
+              </div>
+            ) : recipes.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '40px',
+                backgroundColor: '#fff',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                gridColumn: '1 / -1'
+              }}>
+                <FaUtensils size={40} style={{ color: '#95a5a6', marginBottom: '20px' }} />
+                <h2 style={{ color: '#2c3e50', marginBottom: '10px' }}>No matching recipes found</h2>
+                <p style={{ color: '#7f8c8d' }}>
+                  Try adding more ingredients or adjusting your filters
+                </p>
+              </div>
+            ) : (
+              paginatedRecipes.map((recipe, index) => (
+                <RecipeCard
+                  key={generateUniqueKey(recipe, index, 'match')}
+                  recipe={recipe}
+                  onSelect={() => setSelectedRecipe(recipe)}
+                  onDelete={() => handleDelete(recipe._id)}
+                  onRate={(rating) => handleRateRecipe(recipe._id, rating)}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Pagination Controls for recipe matches */}
+          {recipes.length > ITEMS_PER_PAGE && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: '1rem', 
+              marginTop: '2rem',
+              alignItems: 'center' 
+            }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  cursor: page === 1 ? 'not-allowed' : 'pointer',
+                  opacity: page === 1 ? 0.5 : 1
+                }}
+                aria-label="Previous page"
+              >
+                Previous
+              </button>
+              <span>Page {page} of {Math.ceil(recipes.length / ITEMS_PER_PAGE)}</span>
+              <button
+                onClick={() => setPage(p => Math.min(Math.ceil(recipes.length / ITEMS_PER_PAGE), p + 1))}
+                disabled={page >= Math.ceil(recipes.length / ITEMS_PER_PAGE)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  cursor: page >= Math.ceil(recipes.length / ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer',
+                  opacity: page >= Math.ceil(recipes.length / ITEMS_PER_PAGE) ? 0.5 : 1
+                }}
+                aria-label="Next page"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </ErrorBoundary>
   );
