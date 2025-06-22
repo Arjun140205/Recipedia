@@ -1,10 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaSearch, FaTimes, FaUtensils, FaGlobeAmericas } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
+// Utility function to generate unique keys for recipes
+const generateUniqueRecipeKey = (recipe, index, prefix = 'recipe') => {
+  const id = recipe.idMeal || recipe.id || `unknown-${index}`;
+  const randomStr = Math.random().toString(36).substr(2, 9);
+  const title = recipe.strMeal ? recipe.strMeal.replace(/\s+/g, '-').toLowerCase().substr(0, 10) : 'no-title';
+  return `${prefix}-${id}-${index}-${title}-${randomStr}`;
+};
+
 const Home = () => {
+  const componentId = useId();
   const [recipes, setRecipes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -15,7 +24,9 @@ const Home = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
   const observer = useRef();
+  const loadingTimeoutRef = useRef();
   
   const lastRecipeElementRef = useCallback(node => {
     if (loading) return;
@@ -24,43 +35,76 @@ const Home = () => {
       if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
         loadMoreRecipes();
       }
+    }, {
+      rootMargin: '400px', // Trigger 400px before the element comes into view for smoother loading
+      threshold: 0.1
     });
     if (node) observer.current.observe(node);
   },// eslint-disable-next-line
-   [loading, hasMore, isLoadingMore]);
+   [loading, hasMore, isLoadingMore, recipes]);
 
   const loadMoreRecipes = async () => {
     if (isLoadingMore || !hasMore) return;
-    setIsLoadingMore(true);
-    try {
-      const nextPage = page + 1;
-      const response = await axios.get(
-        `https://www.themealdb.com/api/json/v1/1/search.php?s=${searchTerm}`,
-        { params: { p: nextPage } }
-      );
-      const newRecipes = response.data.meals || [];
-      if (newRecipes.length === 0) {
-        setHasMore(false);
-      } else {
-        setRecipes(prev => [...prev, ...newRecipes]);
-        setPage(nextPage);
-      }
-    } catch (error) {
-      console.error('Error loading more recipes:', error);
+    
+    // Clear any existing timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
     }
-    setIsLoadingMore(false);
+    
+    // Add a small delay to prevent too many rapid calls
+    loadingTimeoutRef.current = setTimeout(async () => {
+      setIsLoadingMore(true);
+      try {
+        // Fetch just 2 recipes at once for smoother, more frequent loading
+        const promises = Array(2).fill().map(() => 
+          axios.get('https://www.themealdb.com/api/json/v1/1/random.php')
+        );
+        const responses = await Promise.all(promises);
+        const newRecipes = responses
+          .map(response => response.data.meals?.[0])
+          .filter(recipe => recipe); // Remove any null values
+        
+        // Filter out duplicates based on idMeal
+        const existingIds = new Set(recipes.map(r => r.idMeal));
+        const uniqueNewRecipes = newRecipes.filter(recipe => !existingIds.has(recipe.idMeal));
+        
+        if (uniqueNewRecipes.length > 0) {
+          setRecipes(prev => [...prev, ...uniqueNewRecipes]);
+        }
+        
+        // Don't disable hasMore, keep infinite scroll going
+        // Only disable if we've reached a very large number of recipes
+        if (recipes.length > 200) {
+          setHasMore(false);
+        }
+      } catch (error) {
+        console.error('Error loading more recipes:', error);
+        // Don't disable on error, just log it
+      }
+      setIsLoadingMore(false);
+    }, 150); // Reduced delay for faster response
   };
+
+  const handleScroll = useCallback(() => {
+    setShowScrollButton(window.scrollY > 300);
+  }, []);
+
+  // Debounced scroll handler for performance
+  const debouncedHandleScroll = useCallback(() => {
+    handleScroll();
+  }, [handleScroll]);
 
   useEffect(() => {
     fetchRandomRecipes();
     fetchCategories();
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const handleScroll = () => {
-    setShowScrollButton(window.scrollY > 300);
-  };
+    window.addEventListener('scroll', debouncedHandleScroll);
+    return () => {
+      window.removeEventListener('scroll', debouncedHandleScroll);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [debouncedHandleScroll]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -77,10 +121,31 @@ const Home = () => {
 
   const searchRecipes = async () => {
     setLoading(true);
+    setSelectedCategory(''); // Clear category when searching
     try {
+      if (searchTerm.trim() === '') {
+        // If search is empty, fetch random recipes instead
+        await fetchRandomRecipes();
+        return;
+      }
+      
       const response = await axios.get(`https://www.themealdb.com/api/json/v1/1/search.php?s=${searchTerm}`);
-      setRecipes(response.data.meals || []);
-      setHasMore(true);
+      const meals = response.data.meals || [];
+      
+      // Remove duplicates based on idMeal
+      const uniqueMeals = [];
+      const seenIds = new Set();
+      
+      for (const meal of meals) {
+        if (!seenIds.has(meal.idMeal)) {
+          seenIds.add(meal.idMeal);
+          uniqueMeals.push(meal);
+        }
+      }
+      
+      setRecipes(uniqueMeals);
+      // Disable infinite scroll for search results since API returns all matches
+      setHasMore(false);
       setPage(1);
     } catch (error) {
       console.error('Error fetching recipes:', error);
@@ -90,11 +155,35 @@ const Home = () => {
 
   const handleCategorySelect = async (category) => {
     setLoading(true);
+    setSearchTerm(''); // Clear search when selecting/deselecting category
+    
+    // Toggle category - if same category is clicked, deselect it
+    if (selectedCategory === category) {
+      setSelectedCategory('');
+      // Return to random recipes when deselecting
+      await fetchRandomRecipes();
+      return;
+    }
+    
     setSelectedCategory(category);
     try {
       const response = await axios.get(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`);
-      setRecipes(response.data.meals || []);
-      setHasMore(true);
+      const meals = response.data.meals || [];
+      
+      // Remove duplicates based on idMeal
+      const uniqueMeals = [];
+      const seenIds = new Set();
+      
+      for (const meal of meals) {
+        if (!seenIds.has(meal.idMeal)) {
+          seenIds.add(meal.idMeal);
+          uniqueMeals.push(meal);
+        }
+      }
+      
+      setRecipes(uniqueMeals);
+      // Disable infinite scroll for category results since API returns all matches
+      setHasMore(false);
       setPage(1);
     } catch (error) {
       console.error('Error fetching category recipes:', error);
@@ -111,14 +200,27 @@ const Home = () => {
   const fetchRandomRecipes = async () => {
     setLoading(true);
     try {
-      const promises = Array(8).fill().map(() => 
+      // Start with fewer recipes for faster initial load
+      const promises = Array(6).fill().map(() => 
         axios.get('https://www.themealdb.com/api/json/v1/1/random.php')
       );
       const responses = await Promise.all(promises);
       const recipes = responses
         .map(response => response.data.meals?.[0])
         .filter(recipe => recipe); // Remove any null values
-      setRecipes(recipes);
+      
+      // Remove duplicates based on idMeal
+      const uniqueRecipes = [];
+      const seenIds = new Set();
+      
+      for (const recipe of recipes) {
+        if (!seenIds.has(recipe.idMeal)) {
+          seenIds.add(recipe.idMeal);
+          uniqueRecipes.push(recipe);
+        }
+      }
+      
+      setRecipes(uniqueRecipes);
       setHasMore(true);
       setPage(1);
     } catch (error) {
@@ -448,7 +550,9 @@ const Home = () => {
                 style={{
                   padding: '0.5rem 1rem',
                   borderRadius: '20px',
-                  border: '1px solid rgba(230, 126, 34, 0.3)',
+                  border: selectedCategory === category.strCategory 
+                    ? '2px solid #e67e22' 
+                    : '1px solid rgba(230, 126, 34, 0.3)',
                   background: selectedCategory === category.strCategory 
                     ? '#e67e22' 
                     : 'rgba(255, 255, 255, 0.9)',
@@ -459,8 +563,12 @@ const Home = () => {
                   whiteSpace: 'nowrap',
                   transition: 'all 0.2s ease',
                   backdropFilter: 'blur(5px)',
-                  WebkitBackdropFilter: 'blur(5px)'
+                  WebkitBackdropFilter: 'blur(5px)',
+                  fontWeight: selectedCategory === category.strCategory ? '600' : '400'
                 }}
+                title={selectedCategory === category.strCategory 
+                  ? `Click to deselect ${category.strCategory}` 
+                  : `Filter by ${category.strCategory}`}
               >
                 {category.strCategory}
               </motion.button>
@@ -520,8 +628,9 @@ const Home = () => {
           }}>Cooking up some delicious recipes...</p>
         </div>
       ) : (
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           <motion.div
+            key={`recipe-grid-${page}-${searchTerm}-${selectedCategory}`}
             layout
             style={{
               display: 'grid',
@@ -530,25 +639,58 @@ const Home = () => {
             }}
           >
             {recipes.map((recipe, index) => (
-              <div
-                key={recipe.idMeal}
-                ref={index === recipes.length - 1 ? lastRecipeElementRef : null}
+              <motion.div
+                key={`${componentId}-${generateUniqueRecipeKey(recipe, index)}`}
+                ref={index === recipes.length - 3 ? lastRecipeElementRef : null}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
               >
                 <RecipeCard recipe={recipe} />
-              </div>
+              </motion.div>
             ))}
           </motion.div>
         </AnimatePresence>
       )}
 
       {isLoadingMore && (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '2rem',
-          opacity: 0.7 
-        }}>
-          Loading more recipes...
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          style={{ 
+            textAlign: 'center', 
+            padding: '2rem',
+            position: 'relative'
+          }}
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            style={{
+              width: '32px',
+              height: '32px',
+              border: '3px solid rgba(230, 126, 34, 0.2)',
+              borderTop: '3px solid #e67e22',
+              borderRadius: '50%',
+              margin: '0 auto 0.5rem'
+            }}
+          />
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            style={{ 
+              fontSize: '0.9rem',
+              color: '#999',
+              margin: 0,
+              fontWeight: '400'
+            }}
+          >
+            Loading more recipes...
+          </motion.p>
+        </motion.div>
       )}
 
       <AnimatePresence>
