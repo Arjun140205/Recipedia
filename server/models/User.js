@@ -10,6 +10,35 @@ const UserSchema = new mongoose.Schema({
   password: { 
     type: String, 
     required: true 
+  },
+  pantryIngredients: [{
+    name: {
+      type: String,
+      required: true
+    },
+    category: {
+      type: String,
+      enum: ['produce', 'dairy', 'meat', 'grains', 'spices', 'other'],
+      default: 'other'
+    },
+    addedDate: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  dietaryPreferences: {
+    vegetarian: {
+      type: Boolean,
+      default: false
+    },
+    vegan: {
+      type: Boolean,
+      default: false
+    },
+    glutenFree: {
+      type: Boolean,
+      default: false
+    }
   }
 }, { timestamps: true });
 
