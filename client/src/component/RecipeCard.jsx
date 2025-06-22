@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { FaTimes, FaStar } from 'react-icons/fa';
+import { FaTimes, FaStar, FaCheckCircle } from 'react-icons/fa';
 
 const RecipeCard = ({ recipe, onSelect, onDelete }) => {
   const [imageError, setImageError] = useState(false);
@@ -22,6 +22,23 @@ const RecipeCard = ({ recipe, onSelect, onDelete }) => {
 
   const handleImageLoad = () => {
     setImageLoaded(true);
+  };
+
+  const matchBadgeStyle = {
+    position: 'absolute',
+    top: '10px',
+    left: '10px',
+    backgroundColor: recipe.matchPercentage >= 90 ? '#27ae60' : 
+                    recipe.matchPercentage >= 70 ? '#f39c12' : '#e74c3c',
+    color: 'white',
+    padding: '4px 8px',
+    borderRadius: '12px',
+    fontSize: '0.9rem',
+    fontWeight: 'bold',
+    zIndex: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px'
   };
 
   return (
@@ -48,8 +65,16 @@ const RecipeCard = ({ recipe, onSelect, onDelete }) => {
         e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
       }}
     >
+      {/* Match Percentage Badge */}
+      {recipe.matchPercentage !== undefined && (
+        <div style={matchBadgeStyle}>
+          <FaCheckCircle size={14} />
+          {recipe.matchPercentage}% Match
+        </div>
+      )}
+
       {/* Delete Button */}
-      {showDelete && (
+      {showDelete && onDelete && (
         <button
           onClick={handleDelete}
           style={{
@@ -98,48 +123,86 @@ const RecipeCard = ({ recipe, onSelect, onDelete }) => {
         />
       </div>
 
-      <div className="recipe-details" style={{ padding: '1rem' }}>
-        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>{recipe.strMeal || recipe.title}</h3>
-        {recipe.description && (
-          <p style={{ 
-            margin: 0, 
-            color: '#666', 
-            fontSize: '0.9rem',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
-          }}>{recipe.description}</p>
-        )}
+      <div style={{ padding: '15px' }}>
+        <h3 style={{ 
+          margin: '0 0 10px 0',
+          fontSize: '1.2rem',
+          color: '#2c3e50'
+        }}>
+          {recipe.strMeal || recipe.title}
+        </h3>
+        
         <div style={{ 
           display: 'flex', 
-          alignItems: 'center', 
-          marginTop: '0.5rem',
-          color: '#666',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          color: '#7f8c8d',
           fontSize: '0.9rem'
         }}>
-          <FaStar style={{ color: '#FFD700' }} />
-          <span style={{ marginLeft: '0.25rem' }}>
-            {recipe.popularity ? recipe.popularity.toFixed(1) : '0.0'}
+          <span>
+            {recipe.prepTime} mins
           </span>
+          {recipe.difficulty && (
+            <span style={{
+              textTransform: 'capitalize',
+              color: recipe.difficulty === 'easy' ? '#27ae60' :
+                     recipe.difficulty === 'medium' ? '#f39c12' : '#e74c3c'
+            }}>
+              {recipe.difficulty}
+            </span>
+          )}
         </div>
+
+        {recipe.dietary && (
+          <div style={{ 
+            display: 'flex', 
+            gap: '8px', 
+            marginTop: '10px'
+          }}>
+            {recipe.dietary.vegetarian && (
+              <span style={{ 
+                backgroundColor: '#e8f5e9',
+                color: '#2e7d32',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.8rem'
+              }}>
+                Vegetarian
+              </span>
+            )}
+            {recipe.dietary.vegan && (
+              <span style={{ 
+                backgroundColor: '#e8f5e9',
+                color: '#2e7d32',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.8rem'
+              }}>
+                Vegan
+              </span>
+            )}
+            {recipe.dietary.glutenFree && (
+              <span style={{ 
+                backgroundColor: '#fff3e0',
+                color: '#ef6c00',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.8rem'
+              }}>
+                Gluten-Free
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 RecipeCard.propTypes = {
-  recipe: PropTypes.shape({
-    idMeal: PropTypes.string,
-    strMeal: PropTypes.string,
-    strMealThumb: PropTypes.string,
-    title: PropTypes.string,
-    image: PropTypes.string,
-    description: PropTypes.string,
-    popularity: PropTypes.number
-  }).isRequired,
+  recipe: PropTypes.object.isRequired,
   onSelect: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired
+  onDelete: PropTypes.func
 };
 
-export default RecipeCard;
+export default React.memo(RecipeCard);
