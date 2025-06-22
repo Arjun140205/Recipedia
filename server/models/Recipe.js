@@ -9,10 +9,20 @@ const RecipeSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  ingredients: { 
-    type: String, 
-    required: true 
-  },
+  ingredients: [{ 
+    name: {
+      type: String,
+      required: true
+    },
+    amount: {
+      type: String,
+      required: true
+    },
+    optional: {
+      type: Boolean,
+      default: false
+    }
+  }],
   instructions: { 
     type: String, 
     required: true 
@@ -25,8 +35,32 @@ const RecipeSchema = new mongoose.Schema({
     required: true
   },
   prepTime: {
-    type: Number,
+    type: Number, // in minutes
     required: true
+  },
+  difficulty: {
+    type: String,
+    enum: ['easy', 'medium', 'hard'],
+    default: 'medium'
+  },
+  dietary: {
+    vegetarian: {
+      type: Boolean,
+      default: false
+    },
+    vegan: {
+      type: Boolean,
+      default: false
+    },
+    glutenFree: {
+      type: Boolean,
+      default: false
+    }
+  },
+  servings: {
+    type: Number,
+    required: true,
+    default: 4
   },
   popularity: {
     type: Number,
