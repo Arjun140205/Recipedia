@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/recipes';
+const BASE_URL = 'http://localhost:8000/api';
+const RECIPES_URL = `${BASE_URL}/recipes`;
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('token');
@@ -10,7 +11,7 @@ const getAuthHeader = () => {
 };
 
 export const getRecipes = async () => {
-  const response = await axios.get(API_URL, { headers: getAuthHeader() });
+  const response = await axios.get(RECIPES_URL, { headers: getAuthHeader() });
   return response.data.recipes;
 };
 
@@ -47,7 +48,7 @@ export const createRecipe = async (recipeData) => {
   }
 
   try {
-    const response = await axios.post(API_URL, formData, {
+    const response = await axios.post(RECIPES_URL, formData, {
       headers: {
         ...getAuthHeader(),
         'Content-Type': 'multipart/form-data'
@@ -95,7 +96,7 @@ export const updateRecipe = async (id, recipeData) => {
   }
 
   try {
-    const response = await axios.put(`${API_URL}/${id}`, formData, {
+    const response = await axios.put(`${RECIPES_URL}/${id}`, formData, {
       headers: {
         ...getAuthHeader(),
         'Content-Type': 'multipart/form-data'
@@ -111,8 +112,77 @@ export const updateRecipe = async (id, recipeData) => {
 };
 
 export const deleteRecipe = async (id) => {
-  const response = await axios.delete(`${API_URL}/${id}`, {
+  const response = await axios.delete(`${RECIPES_URL}/${id}`, {
     headers: getAuthHeader()
   });
   return response.data;
-}; 
+};
+
+export const findMatchingRecipes = async (ingredients, filters = {}, minMatch = 60) => {
+  try {
+    const response = await axios.post(
+      `${RECIPES_URL}/match`,
+      { ingredients, filters, minMatch },
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error finding matching recipes:', error);
+    throw error;
+  }
+};
+
+export const getMissingIngredients = async (recipeId, ingredients) => {
+  try {
+    const response = await axios.post(
+      `${RECIPES_URL}/${recipeId}/missing-ingredients`,
+      { ingredients },
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error getting missing ingredients:', error);
+    throw error;
+  }
+};
+
+export const updatePantryIngredients = async (ingredients) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/user/pantry`,
+      { ingredients },
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating pantry ingredients:', error);
+    throw error;
+  }
+};
+
+export const getPantryIngredients = async () => {
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/user/pantry`,
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error getting pantry ingredients:', error);
+    throw error;
+  }
+};
+
+export const updateUserPreferences = async (preferences) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/user/preferences`,
+      { preferences },
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user preferences:', error);
+    throw error;
+  }
+};
