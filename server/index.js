@@ -12,6 +12,7 @@ const NodeCache = require('node-cache');
 const apiCache = new NodeCache({ stdTTL: 600 }); // Cache for 10 minutes
 const User = require('./models/User');
 const Recipe = require('./models/Recipe');
+const RecipeMatchService = require('./services/recipeMatchService');
 
 const app = express();
 
@@ -338,6 +339,110 @@ app.delete('/api/recipes/:id', authenticateJWT, async (req, res) => {
     res.json({ message: 'Recipe deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete recipe', details: error.message });
+  }
+});
+
+// FridgeMate Routes
+
+// Update user's pantry ingredients
+app.post('/api/user/pantry', authenticateJWT, async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.pantryIngredients = ingredients.map(ing => ({
+      name: ing.name,
+      category: ing.category || 'other'
+    }));
+
+    await user.save();
+    res.json({ message: 'Pantry updated successfully', pantryIngredients: user.pantryIngredients });
+  } catch (error) {
+    console.error('Error updating pantry:', error);
+    res.status(500).json({ error: 'Error updating pantry' });
+  }
+});
+
+// Get user's pantry ingredients
+app.get('/api/user/pantry', authenticateJWT, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user.pantryIngredients);
+  } catch (error) {
+    console.error('Error fetching pantry:', error);
+    res.status(500).json({ error: 'Error fetching pantry' });
+  }
+});
+
+// Find matching recipes based on user's ingredients
+app.post('/api/recipes/match', authenticateJWT, async (req, res) => {
+  try {
+    const { ingredients, filters, minMatch } = req.body;
+    
+    // Get matching recipes
+    const matchedRecipes = await RecipeMatchService.findMatchingRecipes(
+      ingredients,
+      filters,
+      minMatch
+    );
+
+    res.json(matchedRecipes);
+  } catch (error) {
+    console.error('Error matching recipes:', error);
+    res.status(500).json({ error: 'Error matching recipes' });
+  }
+});
+
+// Get missing ingredients for a specific recipe
+app.post('/api/recipes/:recipeId/missing-ingredients', authenticateJWT, async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+    const recipe = await Recipe.findById(req.params.recipeId);
+    
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    const missingIngredients = RecipeMatchService.findMissingIngredients(
+      ingredients,
+      recipe.ingredients
+    );
+
+    res.json(missingIngredients);
+  } catch (error) {
+    console.error('Error finding missing ingredients:', error);
+    res.status(500).json({ error: 'Error finding missing ingredients' });
+  }
+});
+
+// Update user's dietary preferences
+app.post('/api/user/preferences', authenticateJWT, async (req, res) => {
+  try {
+    const { preferences } = req.body;
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.dietaryPreferences = {
+      ...user.dietaryPreferences,
+      ...preferences
+    };
+
+    await user.save();
+    res.json({ message: 'Preferences updated successfully', preferences: user.dietaryPreferences });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ error: 'Error updating preferences' });
   }
 });
 
