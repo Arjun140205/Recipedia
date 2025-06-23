@@ -146,15 +146,6 @@ const Navbar = () => {
             Our Story
           </Link>
 
-          <Link
-            to="/fridge-mate"
-            style={navLinkStyle}
-            onMouseOver={hoverIn}
-            onMouseOut={hoverOut}
-          >
-            Fridge Mate
-          </Link>
-
           {isAuthenticated ? (
             <>
               <Link
