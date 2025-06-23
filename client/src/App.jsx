@@ -7,6 +7,7 @@ import Signup from './pages/Signup';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
+import FridgeMate from './pages/FridgeMate';
 import Navbar from './component/Navbar';
 import PrivateRoute from './component/PrivateRoute';
 
@@ -17,6 +18,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
+        <Route path="/fridge-mate" element={<FridgeMate />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route
