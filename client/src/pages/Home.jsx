@@ -46,55 +46,43 @@ const Home = () => {
   const loadMoreRecipes = async () => {
     if (isLoadingMore || !hasMore) return;
     
-    // Clear any existing timeout
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
     
-    // Add a small delay to prevent too many rapid calls
     loadingTimeoutRef.current = setTimeout(async () => {
       setIsLoadingMore(true);
       try {
-        // Fetch just 2 recipes at once for smoother loading
         const apiUrl = 'https://www.themealdb.com/api/json/v1/1/random.php';
         
         const promises = Array(2).fill().map(async () => {
           try {
-            // Simple fetch without custom headers to avoid CORS preflight
             const response = await fetch(apiUrl);
-            
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            if (!data || !data.meals || !data.meals[0]) {
+              throw new Error('No meal data in response');
             }
-            
-            return await response.json();
+            return data;
           } catch (error) {
-            console.warn('HTTPS fetch failed, trying HTTP:', error.message);
-            const httpResponse = await fetch(apiUrl.replace('https://', 'http://'));
-            if (!httpResponse.ok) {
-              throw new Error(`HTTP fallback error! status: ${httpResponse.status}`);
-            }
-            return await httpResponse.json();
+            console.warn('Recipe fetch failed:', error.message);
+            return null;
           }
         });
         
         const responses = await Promise.allSettled(promises);
         const newRecipes = responses
-          .filter(result => result.status === 'fulfilled')
-          .map(result => result.value?.meals?.[0])
-          .filter(recipe => recipe); // Remove any null values
+          .filter(result => result.status === 'fulfilled' && result.value)
+          .map(result => result.value.meals?.[0])
+          .filter(recipe => recipe);
         
-        // Filter out duplicates based on idMeal
         const existingIds = new Set(recipes.map(r => r.idMeal));
         const uniqueNewRecipes = newRecipes.filter(recipe => !existingIds.has(recipe.idMeal));
         
         if (uniqueNewRecipes.length > 0) {
           setRecipes(prev => [...prev, ...uniqueNewRecipes]);
-        } else {
-          console.warn('No new unique recipes loaded');
         }
         
-        // Only disable if we've reached a very large number of recipes
         if (recipes.length > 200) {
           setHasMore(false);
           console.log('Reached maximum recipe limit');
@@ -104,7 +92,7 @@ const Home = () => {
         toast.warning('Having trouble loading more recipes. Please wait...');
       }
       setIsLoadingMore(false);
-    }, 300); // Small delay to prevent API spam
+    }, 300);
   };
 
   const handleScroll = useCallback(() => {
@@ -138,6 +126,7 @@ const Home = () => {
       setCategories(response.data.categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
+      toast.error('Unable to load categories. Please try again later.');
     }
   };
 
@@ -171,6 +160,7 @@ const Home = () => {
       setPage(1);
     } catch (error) {
       console.error('Error fetching recipes:', error);
+      toast.error('Unable to search recipes. Please try again.');
     }
     setLoading(false);
   };
@@ -209,6 +199,7 @@ const Home = () => {
       setPage(1);
     } catch (error) {
       console.error('Error fetching category recipes:', error);
+      toast.error('Unable to load category recipes. Please try again.');
     }
     setLoading(false);
   };
@@ -226,7 +217,6 @@ const Home = () => {
       const apiUrl = 'https://www.themealdb.com/api/json/v1/1/random.php';
       const promises = Array(6).fill().map(async () => {
         try {
-          // Simple fetch without custom headers to avoid CORS preflight
           const response = await fetch(apiUrl);
           
           if (!response.ok) {
@@ -240,21 +230,14 @@ const Home = () => {
           
           return data;
         } catch (error) {
-          console.warn('HTTPS fetch failed, trying HTTP:', error.message);
-          // Fallback to HTTP if HTTPS fails
-          const httpResponse = await fetch(apiUrl.replace('https://', 'http://'));
-          
-          if (!httpResponse.ok) {
-            throw new Error(`HTTP fallback error! status: ${httpResponse.status}`);
-          }
-          
-          return httpResponse.json();
+          console.warn('Recipe fetch failed:', error.message);
+          return null;
         }
       });
       
       const responses = await Promise.allSettled(promises);
       const recipes = responses
-        .filter(result => result.status === 'fulfilled')
+        .filter(result => result.status === 'fulfilled' && result.value)
         .map(result => result.value.meals?.[0])
         .filter(recipe => recipe); // Remove any null values
       
@@ -270,26 +253,28 @@ const Home = () => {
       }
       
       if (uniqueRecipes.length === 0) {
-        toast.warning('Having trouble loading recipes. Retrying with alternate method...');
-        // Try one final time with HTTP
+        toast.warning('Having trouble loading recipes. Retrying...');
+        // Try one final time
         try {
-          const fallbackResponse = await fetch('http://www.themealdb.com/api/json/v1/1/random.php');
-          const fallbackData = await fallbackResponse.json();
-          if (fallbackData.meals?.[0]) {
-            setRecipes([fallbackData.meals[0]]);
-          } else {
-            throw new Error('No recipes could be fetched');
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          if (data.meals?.[0]) {
+            uniqueRecipes.push(data.meals[0]);
+            toast.success('Successfully loaded a recipe!');
           }
         } catch (fallbackError) {
           console.error('Final fallback failed:', fallbackError);
           toast.error('Unable to fetch recipes. Please try again later.');
         }
-      } else {
-        setRecipes(uniqueRecipes);
       }
       
-      setHasMore(true);
-      setPage(1);
+      if (uniqueRecipes.length > 0) {
+        setRecipes(uniqueRecipes);
+        setHasMore(true);
+        setPage(1);
+      } else {
+        toast.error('Unable to fetch recipes. Please try again.');
+      }
     } catch (error) {
       console.error('Error fetching random recipes:', error);
       toast.error('Failed to fetch recipes. Please try refreshing the page.');
@@ -300,40 +285,16 @@ const Home = () => {
   const getRecipeDetails = async (id) => {
     try {
       const apiUrl = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
-      try {
-        // Try HTTPS first
-        const response = await axios.get(apiUrl, {
-          timeout: 5000,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
+      const response = await axios.get(apiUrl);
+      
+      if (response.data && response.data.meals && response.data.meals[0]) {
         setSelectedRecipe(response.data.meals[0]);
-      } catch (error) {
-        // If SSL error or timeout, fallback to HTTP
-        if (error.code === 'ERR_CERT_AUTHORITY_INVALID' || 
-            error.message.includes('certificate') ||
-            error.code === 'ECONNABORTED' ||
-            error.message.includes('timeout')) {
-          console.warn('HTTPS failed (SSL/timeout), trying HTTP for recipe details');
-          const response = await axios.get(apiUrl.replace('https://', 'http://'), {
-            timeout: 5000
-          });
-          setSelectedRecipe(response.data.meals[0]);
-        } else {
-          throw error;
-        }
+      } else {
+        throw new Error('Recipe details not found');
       }
     } catch (error) {
       console.error('Error fetching recipe details:', error);
-      if (error.code === 'ERR_CERT_AUTHORITY_INVALID' || error.message.includes('certificate')) {
-        toast.error('Connection security issue - trying alternate connection');
-      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        toast.error('Connection timeout - please try again');
-      } else {
-        toast.error('Failed to load recipe details');
-      }
+      toast.error('Unable to load recipe details. Please try again.');
     }
   };
 
