@@ -56,12 +56,36 @@ const Home = () => {
       setIsLoadingMore(true);
       try {
         // Fetch just 2 recipes at once for smoother, more frequent loading
-        const promises = Array(2).fill().map(() => 
-          axios.get('https://www.themealdb.com/api/json/v1/1/random.php')
-        );
-        const responses = await Promise.all(promises);
+        const apiUrl = 'https://www.themealdb.com/api/json/v1/1/random.php';
+        
+        const promises = Array(2).fill().map(async () => {
+          try {
+            return await axios.get(apiUrl, { 
+              timeout: 5000, // Reduced timeout for faster failure detection
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+          } catch (error) {
+            if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+              console.warn('HTTPS timeout, trying HTTP with shorter timeout');
+              return await axios.get(apiUrl.replace('https://', 'http://'), { 
+                timeout: 3000 // Even shorter timeout for HTTP fallback
+              });
+            } else {
+              // Fallback to HTTP if HTTPS fails
+              return await axios.get(apiUrl.replace('https://', 'http://'), { 
+                timeout: 5000 
+              });
+            }
+          }
+        });
+        
+        const responses = await Promise.allSettled(promises);
         const newRecipes = responses
-          .map(response => response.data.meals?.[0])
+          .filter(result => result.status === 'fulfilled')
+          .map(result => result.value.data.meals?.[0])
           .filter(recipe => recipe); // Remove any null values
         
         // Filter out duplicates based on idMeal
@@ -70,6 +94,8 @@ const Home = () => {
         
         if (uniqueNewRecipes.length > 0) {
           setRecipes(prev => [...prev, ...uniqueNewRecipes]);
+        } else if (newRecipes.length === 0) {
+          console.warn('No recipes loaded due to network issues');
         }
         
         // Don't disable hasMore, keep infinite scroll going
@@ -79,10 +105,14 @@ const Home = () => {
         }
       } catch (error) {
         console.error('Error loading more recipes:', error);
-        // Don't disable on error, just log it
+        // On persistent errors, provide better user feedback
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          console.warn('Network timeout - pausing infinite scroll temporarily');
+        }
+        // Don't disable hasMore completely, just log the error
       }
       setIsLoadingMore(false);
-    }, 150); // Reduced delay for faster response
+    }, 300); // Slightly longer delay to reduce API pressure // Reduced delay for faster response
   };
 
   const handleScroll = useCallback(() => {
@@ -201,12 +231,36 @@ const Home = () => {
     setLoading(true);
     try {
       // Start with fewer recipes for faster initial load
-      const promises = Array(6).fill().map(() => 
-        axios.get('https://www.themealdb.com/api/json/v1/1/random.php')
-      );
-      const responses = await Promise.all(promises);
+      const apiUrl = 'https://www.themealdb.com/api/json/v1/1/random.php';
+      const promises = Array(6).fill().map(async () => {
+        try {
+          // Try HTTPS first
+          return await axios.get(apiUrl, {
+            timeout: 5000,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+        } catch (error) {
+          // If SSL error or timeout, fallback to HTTP
+          if (error.code === 'ERR_CERT_AUTHORITY_INVALID' || 
+              error.message.includes('certificate') ||
+              error.code === 'ECONNABORTED' ||
+              error.message.includes('timeout')) {
+            console.warn('HTTPS failed (SSL/timeout), trying HTTP:', error.message);
+            return await axios.get(apiUrl.replace('https://', 'http://'), {
+              timeout: 5000
+            });
+          }
+          throw error; // Re-throw other errors
+        }
+      });
+      
+      const responses = await Promise.allSettled(promises);
       const recipes = responses
-        .map(response => response.data.meals?.[0])
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value.data.meals?.[0])
         .filter(recipe => recipe); // Remove any null values
       
       // Remove duplicates based on idMeal
@@ -225,17 +279,68 @@ const Home = () => {
       setPage(1);
     } catch (error) {
       console.error('Error fetching random recipes:', error);
-      toast.error('Failed to fetch recipes');
+      if (error.code === 'ERR_CERT_AUTHORITY_INVALID' || error.message.includes('certificate')) {
+        toast.error('SSL certificate error - retrying with alternate connection');
+        // Try one more time with HTTP
+        try {
+          const httpResponse = await axios.get('http://www.themealdb.com/api/json/v1/1/random.php', {
+            timeout: 5000
+          });
+          if (httpResponse.data.meals?.[0]) {
+            setRecipes([httpResponse.data.meals[0]]);
+            setHasMore(true);
+            setPage(1);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+          toast.error('Unable to connect to recipe service. Please try again later.');
+        }
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        toast.error('Connection timeout - please check your internet connection');
+      } else {
+        toast.error('Failed to fetch recipes. Please try again.');
+      }
     }
     setLoading(false);
   };
 
   const getRecipeDetails = async (id) => {
     try {
-      const response = await axios.get(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`);
-      setSelectedRecipe(response.data.meals[0]);
+      const apiUrl = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
+      try {
+        // Try HTTPS first
+        const response = await axios.get(apiUrl, {
+          timeout: 5000,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        setSelectedRecipe(response.data.meals[0]);
+      } catch (error) {
+        // If SSL error or timeout, fallback to HTTP
+        if (error.code === 'ERR_CERT_AUTHORITY_INVALID' || 
+            error.message.includes('certificate') ||
+            error.code === 'ECONNABORTED' ||
+            error.message.includes('timeout')) {
+          console.warn('HTTPS failed (SSL/timeout), trying HTTP for recipe details');
+          const response = await axios.get(apiUrl.replace('https://', 'http://'), {
+            timeout: 5000
+          });
+          setSelectedRecipe(response.data.meals[0]);
+        } else {
+          throw error;
+        }
+      }
     } catch (error) {
       console.error('Error fetching recipe details:', error);
+      if (error.code === 'ERR_CERT_AUTHORITY_INVALID' || error.message.includes('certificate')) {
+        toast.error('Connection security issue - trying alternate connection');
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        toast.error('Connection timeout - please try again');
+      } else {
+        toast.error('Failed to load recipe details');
+      }
     }
   };
 
