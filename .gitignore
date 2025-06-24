@@ -5,3 +5,6 @@ server/uploads/*
 
 # But do NOT ignore .gitkeep
 !server/uploads/.gitkeep
+.env
+.env
+client/.env
