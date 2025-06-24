@@ -138,12 +138,12 @@ const Navbar = () => {
           </Link>
 
           <Link
-            to="/about"
+            to="/recipes"
             style={navLinkStyle}
             onMouseOver={hoverIn}
             onMouseOut={hoverOut}
           >
-            Our Story
+            Recipes
           </Link>
 
           <Link
