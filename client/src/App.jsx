@@ -8,16 +8,24 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import FridgeMate from './pages/FridgeMate';
+import Recipes from './pages/Recipes';
 import Navbar from './component/Navbar';
 import PrivateRoute from './component/PrivateRoute';
+import Footer from './component/Footer';
 
 function App() {
+  const currentPath = window.location.pathname;
+  const showFooter =
+    currentPath !== '/recipes' &&
+    currentPath !== '/about'; // '/about' also shows recipes for backward compatibility
+
   return (
     <>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
+        <Route path="/" element={<About />} />
+        <Route path="/recipes" element={<Recipes />} />
+        <Route path="/about" element={<Recipes />} />
         <Route path="/fridge-mate" element={<FridgeMate />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
@@ -30,6 +38,7 @@ function App() {
           }
         />
       </Routes>
+      {showFooter && <Footer />}
       <ToastContainer
         position="bottom-right"
         autoClose={3000}
