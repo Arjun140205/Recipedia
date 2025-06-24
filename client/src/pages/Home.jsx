@@ -12,7 +12,7 @@ const generateUniqueRecipeKey = (recipe, index, prefix = 'recipe') => {
   return `${prefix}-${id}-${index}-${title}-${randomStr}`;
 };
 
-const Home = () => {
+const Recipes = () => {
   const componentId = useId();
   const [recipes, setRecipes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -821,4 +821,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Recipes;
