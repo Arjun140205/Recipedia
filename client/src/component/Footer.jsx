@@ -45,7 +45,7 @@ const Footer = () => (
       for moms
     </span>
     <span style={copyrightStyle}>
-      &copy; {new Date().getFullYear()} Recipe Finder
+      &copy; {new Date().getFullYear()} Recipedia
     </span>
     <style>{`
       @keyframes blink-heart {
