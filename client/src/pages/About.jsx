@@ -74,7 +74,7 @@ const About = () => {
           For the Heart of Every Home: Moms Who Make Magic
         </h1>
         <p style={{ ...subheadingStyle, fontSize: '1.1rem', fontStyle: 'normal', color: '#b9770e' }}>
-          Discover inspiration, break the routine, and bring joy to your family’s table with every delicious discovery.
+          Discover inspiration, break the routine, and bring joy to your family's table with every delicious discovery.
         </p>
       </div>
 
@@ -115,13 +115,13 @@ const About = () => {
       {/* Story/Mission Section */}
       <div style={storyStyle}>
         <h2 style={{ fontSize: '1.3rem', marginBottom: '1.2rem', color: '#e67e22', fontFamily: 'inherit' }}>
-          Why Recipe Finder?
+          Why Recipedia?
         </h2>
         <p style={{ fontSize: '1.08rem', lineHeight: '1.8', color: '#34495e' }}>
-          In the ever-evolving theatre of family life, it is the mother who dons the mantle of culinary innovator, especially on those languorous Sundays and the inevitable days when children, with their insatiable curiosity, yearn for something beyond the quotidian. Recipe Finder is not merely a compendium of recipes, it is a celebration of maternal ingenuity, a digital ally for every mom who wishes to transform the refrain of “not the same food again!” into an opportunity for delight and discovery.
+          In the ever-evolving theatre of family life, it is the mother who dons the mantle of culinary innovator, especially on those languorous Sundays and the inevitable days when children, with their insatiable curiosity, yearn for something beyond the quotidian. Recipedia is not merely a compendium of recipes, it is a celebration of maternal ingenuity, a digital ally for every mom who wishes to transform the refrain of "not the same food again!" into an opportunity for delight and discovery.
         </p>
         <p style={{ fontSize: '1.05rem', lineHeight: '1.7', color: '#34495e', marginTop: '1.1rem' }}>
-          Here, inspiration is perennial. Whether you are orchestrating a swift weekday meal or curating a Sunday feast that lingers in memory, Recipe Finder empowers you to break the cycle of repetition and infuse your kitchen with creativity. For every mother seeking to enchant her family’s palate and for every child who dreams of variety, this platform is your passport to a world where every meal is a new adventure, and every table, a stage for joy.
+          Here, inspiration is perennial. Whether you are orchestrating a swift weekday meal or curating a Sunday feast that lingers in memory, Recipedia empowers you to break the cycle of repetition and infuse your kitchen with creativity. For every mother seeking to enchant her family's palate and for every child who dreams of variety, this platform is your passport to a world where every meal is a new adventure, and every table, a stage for joy.
         </p>
       </div>
     </div>
