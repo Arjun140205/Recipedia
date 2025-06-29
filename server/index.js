@@ -54,16 +54,23 @@ app.use((req, res, next) => {
 
 // Middleware for JWT authentication
 const authenticateJWT = (req, res, next) => {
+  console.log('Authentication middleware called');
+  console.log('Headers:', req.headers);
+  
   const token = req.headers.authorization;
   if (!token) {
+    console.log('No token provided');
     return res.status(403).json({ error: 'Access denied' });
   }
   
   try {
+    console.log('Token received:', token);
     const decoded = jwt.verify(token.replace('Bearer ', ''), JWT_SECRET);
+    console.log('Token decoded successfully:', decoded);
     req.user = decoded;
     next();
   } catch (err) {
+    console.error('Token verification failed:', err);
     return res.status(403).json({ error: 'Invalid token' });
   }
 };
@@ -219,18 +226,54 @@ app.get('/api/external-recipes/:id', async (req, res) => {
 // Custom Recipes CRUD Routes
 app.post('/api/recipes', authenticateJWT, upload.single('image'), async (req, res) => {
   try {
+    console.log('Recipe creation request received:', req.body);
+    console.log('User ID:', req.user.id);
+    
     const imagePath = req.file ? `/uploads/${path.basename(req.file.path)}` : '';
+    
+    // Convert ingredients string to array of objects
+    let ingredients = [];
+    if (req.body.ingredients) {
+      // Split by newlines and filter out empty lines
+      const ingredientLines = req.body.ingredients.split('\n').filter(line => line.trim());
+      ingredients = ingredientLines.map(line => {
+        const trimmed = line.trim();
+        return {
+          name: trimmed,
+          amount: '1', // Default amount
+          optional: false
+        };
+      });
+    }
+    
+    // Ensure prepTime is a number
+    const prepTime = parseInt(req.body.prepTime) || 0;
+    
+    console.log('Processed data:', {
+      title: req.body.title,
+      ingredients: ingredients,
+      instructions: req.body.instructions,
+      category: req.body.category,
+      prepTime: prepTime,
+      description: req.body.description,
+      userId: req.user.id
+    });
+    
     const recipe = new Recipe({
       title: req.body.title,
-      ingredients: req.body.ingredients,
+      ingredients: ingredients,
       instructions: req.body.instructions,
       image: imagePath,
       userId: req.user.id,
       category: req.body.category,
-      prepTime: req.body.prepTime,
+      prepTime: prepTime,
       description: req.body.description,
     });
+    
+    console.log('Recipe object created, attempting to save...');
     await recipe.save();
+    console.log('Recipe saved successfully');
+    
     const populatedRecipe = { 
       ...recipe.toObject(), 
       image: imagePath ? `${req.protocol}://${req.get('host')}${imagePath}` : '' 
@@ -238,6 +281,11 @@ app.post('/api/recipes', authenticateJWT, upload.single('image'), async (req, re
     res.status(201).json({ message: 'Recipe created successfully', recipe: populatedRecipe });
   } catch (error) {
     console.error('Recipe creation error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     res.status(500).json({ error: 'Failed to create recipe', details: error.message });
   }
 });
@@ -261,6 +309,10 @@ app.get('/api/recipes', async (req, res) => {
       if (recipeObj.image) {
         recipeObj.image = `${req.protocol}://${req.get('host')}${recipeObj.image}`;
       }
+      // Convert ingredients array back to string for frontend compatibility
+      if (recipeObj.ingredients && Array.isArray(recipeObj.ingredients)) {
+        recipeObj.ingredients = recipeObj.ingredients.map(ing => ing.name).join('\n');
+      }
       return recipeObj;
     });
 
@@ -282,7 +334,14 @@ app.get('/api/recipes/:id', async (req, res) => {
     if (!recipe) {
       return res.status(404).json({ error: 'Recipe not found' });
     }
-    res.json(recipe);
+    
+    const recipeObj = recipe.toObject();
+    // Convert ingredients array back to string for frontend compatibility
+    if (recipeObj.ingredients && Array.isArray(recipeObj.ingredients)) {
+      recipeObj.ingredients = recipeObj.ingredients.map(ing => ing.name).join('\n');
+    }
+    
+    res.json(recipeObj);
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve recipe', details: error.message });
   }
@@ -297,7 +356,20 @@ app.put('/api/recipes/:id', authenticateJWT, upload.single('image'), async (req,
 
     // Update basic fields
     recipe.title = req.body.title || recipe.title;
-    recipe.ingredients = req.body.ingredients || recipe.ingredients;
+    
+    // Convert ingredients string to array of objects if provided
+    if (req.body.ingredients) {
+      const ingredientLines = req.body.ingredients.split('\n').filter(line => line.trim());
+      recipe.ingredients = ingredientLines.map(line => {
+        const trimmed = line.trim();
+        return {
+          name: trimmed,
+          amount: '1', // Default amount
+          optional: false
+        };
+      });
+    }
+    
     recipe.instructions = req.body.instructions || recipe.instructions;
     recipe.category = req.body.category || recipe.category;
     recipe.prepTime = req.body.prepTime || recipe.prepTime;
