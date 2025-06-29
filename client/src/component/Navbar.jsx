@@ -59,6 +59,7 @@ const Navbar = () => {
     color: '#1a1a1a',
     textDecoration: 'none',
     letterSpacing: '-0.5px',
+    fontFamily: "'Poppins', 'Segoe UI', sans-serif",
   };
 
   const navLinkStyle = {
@@ -114,10 +115,10 @@ const Navbar = () => {
         <Link
           to="/"
           style={logoStyle}
-          onMouseOver={(e) => (e.currentTarget.style.color = '#e67e22')}
-          onMouseOut={(e) => (e.currentTarget.style.color = '#1a1a1a')}
+          onMouseOver={(e) => (e.currentTarget.style.color = '#f39c12')}
+          onMouseOut={(e) => (e.currentTarget.style.color = '#e67e22')}
         >
-          Recipe Finder
+          Recipedia
         </Link>
 
         <div
