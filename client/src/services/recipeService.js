@@ -10,9 +10,23 @@ const getAuthHeader = () => {
   };
 };
 
+// Helper function to normalize recipe data for frontend compatibility
+const normalizeRecipe = (recipe) => {
+  if (!recipe) return recipe;
+  
+  const normalized = { ...recipe };
+  
+  // Convert ingredients array to string if needed
+  if (normalized.ingredients && Array.isArray(normalized.ingredients)) {
+    normalized.ingredients = normalized.ingredients.map(ing => ing.name).join('\n');
+  }
+  
+  return normalized;
+};
+
 export const getRecipes = async () => {
   const response = await axios.get(RECIPES_URL, { headers: getAuthHeader() });
-  return response.data.recipes;
+  return response.data.recipes.map(normalizeRecipe);
 };
 
 export const createRecipe = async (recipeData) => {
@@ -54,7 +68,7 @@ export const createRecipe = async (recipeData) => {
         'Content-Type': 'multipart/form-data'
       }
     });
-    return response.data.recipe;
+    return normalizeRecipe(response.data.recipe);
   } catch (error) {
     if (error.response?.status === 413) {
       throw new Error('Image file is too large. Please use a smaller image.');
@@ -102,7 +116,7 @@ export const updateRecipe = async (id, recipeData) => {
         'Content-Type': 'multipart/form-data'
       }
     });
-    return response.data.recipe;
+    return normalizeRecipe(response.data.recipe);
   } catch (error) {
     if (error.response?.status === 413) {
       throw new Error('Image file is too large. Please use a smaller image.');
