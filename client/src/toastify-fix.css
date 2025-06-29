@@ -1,0 +1,16 @@
+/* Fix for ReactToastify passive event listener warning */
+.Toastify__toast-container {
+  touch-action: none !important;
+}
+
+.Toastify__toast {
+  touch-action: none !important;
+}
+
+.Toastify__close-button {
+  touch-action: none !important;
+}
+
+.Toastify__progress-bar {
+  touch-action: none !important;
+} 
