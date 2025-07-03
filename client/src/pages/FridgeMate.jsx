@@ -180,8 +180,18 @@ const FridgeMate = () => {
   };
 
   const getRecipeDetails = async (id) => {
+    if (!id) {
+      console.error('Recipe ID is missing:', id);
+      toast.error('Recipe ID is missing. Please try again.');
+      return;
+    }
+
+    console.log('Fetching recipe details for ID:', id);
+    
     try {
       const detailUrl = `https://api.spoonacular.com/recipes/${id}/information?apiKey=${SPOONACULAR_API_KEY}`;
+      console.log('Request URL:', detailUrl);
+      
       const detailResponse = await axios.get(detailUrl);
       
       const recipe = {
@@ -233,7 +243,7 @@ const FridgeMate = () => {
 
   const RecipeCard = ({ recipe }) => (
     <div
-      onClick={() => getRecipeDetails(recipe.idMeal)}
+      onClick={() => getRecipeDetails(recipe.id)}
       style={{
         background: 'rgba(255, 255, 255, 0.7)',
         backdropFilter: 'blur(10px)',
@@ -250,8 +260,8 @@ const FridgeMate = () => {
       onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
     >
       <img 
-        src={recipe.strMealThumb} 
-        alt={recipe.strMeal}
+        src={recipe.strMealThumb || recipe.image} 
+        alt={recipe.strMeal || recipe.title}
         style={{
           width: '100%',
           height: '200px',
@@ -291,7 +301,7 @@ const FridgeMate = () => {
           fontSize: '1.2rem',
           fontWeight: '600',
           lineHeight: '1.3'
-        }}>{recipe.strMeal}</h3>
+        }}>{recipe.strMeal || recipe.title}</h3>
         
         <div style={{ 
           display: 'flex', 
@@ -495,9 +505,19 @@ const FridgeMate = () => {
                   backdropFilter: 'blur(5px)',
                   WebkitBackdropFilter: 'blur(5px)'
                 }}
-              >
-                {recipe.strInstructions}
-              </div>
+                dangerouslySetInnerHTML={{
+                  __html: recipe.strInstructions ? 
+                    recipe.strInstructions.replace(
+                      /<ol>/g, '<ol style="margin: 0; padding-left: 1.5rem;">'
+                    ).replace(
+                      /<li>/g, '<li style="margin-bottom: 0.5rem;">'
+                    ).replace(
+                      /<ul>/g, '<ul style="margin: 0; padding-left: 1.5rem;">'
+                    ).replace(
+                      /<p>/g, '<p style="margin-bottom: 1rem;">'
+                    ) : 'No instructions available.'
+                }}
+              />
               
               {recipe.strYoutube && (
                 <div style={{ marginTop: '1.5rem' }}>
