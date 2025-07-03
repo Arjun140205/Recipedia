@@ -62,7 +62,7 @@ const Footer = () => {
   const sectionTitleStyle = {
     fontSize: '1.1rem',
     fontWeight: '600',
-    color: '#ecf0f1',
+    color: '#f39c12',
     marginBottom: '1rem',
     fontFamily: "'Poppins', 'Segoe UI', sans-serif",
   };
@@ -94,15 +94,15 @@ const Footer = () => {
     width: '40px',
     height: '40px',
     borderRadius: '50%',
-    background: 'rgba(255, 255, 255, 0.1)',
-    color: '#bdc3c7',
+    background: 'rgba(230, 126, 34, 0.1)',
+    color: '#d35400',
     transition: 'all 0.3s ease',
     cursor: 'pointer',
   };
 
   const dividerStyle = {
     height: '1px',
-    background: 'linear-gradient(90deg, transparent, rgba(189, 195, 199, 0.3), transparent)',
+    background: 'linear-gradient(90deg, transparent, rgba(230, 126, 34, 0.3), transparent)',
     margin: '2rem 0 1.5rem',
   };
 
@@ -131,9 +131,9 @@ const Footer = () => {
     right: 0,
     bottom: 0,
     background: `
-      radial-gradient(circle at 20% 50%, rgba(230, 126, 34, 0.05) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(52, 152, 219, 0.05) 0%, transparent 50%),
-      radial-gradient(circle at 40% 80%, rgba(155, 89, 182, 0.05) 0%, transparent 50%)
+      radial-gradient(circle at 20% 50%, rgba(230, 126, 34, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(243, 156, 18, 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 40% 80%, rgba(211, 84, 0, 0.05) 0%, transparent 50%)
     `,
     zIndex: 1,
   };
@@ -190,8 +190,8 @@ const Footer = () => {
                 style={socialLinkStyle}
                 whileHover={{ 
                   scale: 1.1,
-                  background: 'rgba(52, 152, 219, 0.2)',
-                  color: '#3498db'
+                  background: 'rgba(243, 156, 18, 0.2)',
+                  color: '#f39c12'
                 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -201,8 +201,8 @@ const Footer = () => {
                 style={socialLinkStyle}
                 whileHover={{ 
                   scale: 1.1,
-                  background: 'rgba(231, 76, 60, 0.2)',
-                  color: '#e74c3c'
+                  background: 'rgba(211, 84, 0, 0.2)',
+                  color: '#d35400'
                 }}
                 whileTap={{ scale: 0.95 }}
               >
