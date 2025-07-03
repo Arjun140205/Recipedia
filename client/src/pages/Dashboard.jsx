@@ -266,7 +266,8 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
   );
 };
 
-const SharePreview = ({ recipe }) => {
+// SharePreview component commented out as it's not being used
+/* const SharePreview = ({ recipe }) => {
   return (
     <div style={{
       backgroundColor: 'white',
@@ -302,7 +303,7 @@ const SharePreview = ({ recipe }) => {
       </div>
     </div>
   );
-};
+}; */
 
 const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, onQRCodeClose }) => {
   const [activeTab, setActiveTab] = useState('ingredients');
@@ -314,9 +315,10 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, 
     return null;
   }
 
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
+  // handleDelete function commented out as it's not being used
+  // const handleDelete = () => {
+  //   setShowDeleteConfirm(true);
+  // };
 
   const confirmDelete = () => {
     onDelete();
@@ -789,14 +791,14 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortOption, setSortOption] = useState('recent');
-  const [userIngredients, setUserIngredients] = useState([]);
-  const [filters, setFilters] = useState({
-    vegetarian: false,
-    vegan: false,
-    glutenFree: false,
-    maxPrepTime: null,
-    difficulty: null
-  });
+  // const [userIngredients, setUserIngredients] = useState([]); // Commented out as unused
+  // const [filters, setFilters] = useState({ // Commented out as unused
+  //   vegetarian: false,
+  //   vegan: false,
+  //   glutenFree: false,
+  //   maxPrepTime: null,
+  //   difficulty: null
+  // });
   const [showForm, setShowForm] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -1024,8 +1026,9 @@ const Dashboard = () => {
     return filteredAndSortedRecipes.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAndSortedRecipes, page]);
 
-  const handleIngredientsUpdate = async (ingredients) => {
-    setUserIngredients(ingredients);
+  // handleIngredientsUpdate and handleFilterChange functions commented out as they're not being used
+  /* const handleIngredientsUpdate = async (ingredients) => {
+    // setUserIngredients(ingredients); // Commented out since userIngredients is unused
     
     try {
       // Save ingredients to user's pantry
@@ -1073,7 +1076,7 @@ const Dashboard = () => {
       ...prev,
       [filterName]: value
     }));
-  };
+  }; */
 
   return (
     <ErrorBoundary>
