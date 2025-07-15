@@ -2,7 +2,6 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://Arjun140205.github.io/Recipe-Finder-Reactapp",
   "dependencies": {
     "@react-spring/web": "^9.7.5",
     "@testing-library/dom": "^9.3.3",
@@ -29,7 +28,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "vercel-build": "react-scripts build"
   },
   "eslintConfig": {
     "extends": [
