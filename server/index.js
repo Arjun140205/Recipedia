@@ -39,7 +39,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Connect to MongoDB with error handling
-mongoose.connect('mongodb://127.0.0.1:27017/recipeapp')
+mongoose.connect('mongodb+srv://arjunbirsingh1699:recipedia@recipedia.vd6ihai.mongodb.net/?retryWrites=true&w=majority&appName=recipedia')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
