@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api';
+// const API_URL = 'http://localhost:8000/api';
+const API_URL = 'https://recipedia-2si5.onrender.com/api';
 
 export const login = async (credentials) => {
   return axios.post(`${API_URL}/login`, credentials);
