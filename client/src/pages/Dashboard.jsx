@@ -4,28 +4,32 @@ import DOMPurify from 'dompurify';
 import { createRecipe, getRecipes, deleteRecipe, updateRecipe } from '../services/recipeService';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaPlus, 
-  FaTimes, 
-  FaUtensils, 
-  FaSpinner, 
-  FaSearch, 
-  FaFilter, 
-  FaSort, 
-  FaSave, 
-  FaStar, 
-  FaRegStar, 
-  FaStarHalfAlt, 
-  FaFire, 
+import {
+  FaPlus,
+  FaTimes,
+  FaUtensils,
+  FaSpinner,
+  FaSearch,
+  FaFilter,
+  FaSort,
+  FaSave,
+  FaStar,
+  FaRegStar,
+  FaStarHalfAlt,
+  FaFire,
   FaClock,
   FaShare,
   FaPrint,
   FaList,
   FaChartLine,
-  FaCircle
+  FaCircle,
+  FaUser,
+  FaPlay
 } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import EnhancedShare from '../component/EnhancedShare';
+import CreatorProfileEdit from '../component/CreatorProfileEdit';
+import '../styles/dashboard.css';
 
 const RECIPE_CATEGORIES = {
   meals: {
@@ -84,7 +88,7 @@ const StarRating = ({ rating, onRate, size = '1.2rem', interactive = false }) =>
       stars.push(
         <FaStar
           key={i}
-          style={{ 
+          style={{
             color: '#e67e22',
             fontSize: size,
             cursor: interactive ? 'pointer' : 'default'
@@ -96,7 +100,7 @@ const StarRating = ({ rating, onRate, size = '1.2rem', interactive = false }) =>
       stars.push(
         <FaStarHalfAlt
           key={i}
-          style={{ 
+          style={{
             color: '#e67e22',
             fontSize: size,
             cursor: interactive ? 'pointer' : 'default'
@@ -108,7 +112,7 @@ const StarRating = ({ rating, onRate, size = '1.2rem', interactive = false }) =>
       stars.push(
         <FaRegStar
           key={i}
-          style={{ 
+          style={{
             color: '#e67e22',
             fontSize: size,
             cursor: interactive ? 'pointer' : 'default'
@@ -123,8 +127,8 @@ const StarRating = ({ rating, onRate, size = '1.2rem', interactive = false }) =>
     <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
       {stars}
       {interactive && (
-        <span style={{ 
-          marginLeft: '0.5rem', 
+        <span style={{
+          marginLeft: '0.5rem',
           fontSize: '0.9rem',
           color: '#666'
         }}>
@@ -251,7 +255,7 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
             <span>{recipe.popularity}</span>
           </div>
         </div>
-        <StarRating 
+        <StarRating
           rating={recipe.popularity}
           onRate={(rating) => onRate(rating)}
           interactive={true}
@@ -428,6 +432,28 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, onShare, sho
         </div>
 
         <div style={{ padding: '2rem' }}>
+          {/* Video Section */}
+          {recipe.video && (
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ marginBottom: '1rem', color: '#333' }}>
+                <FaPlay style={{ marginRight: '0.5rem' }} />
+                Recipe Video
+              </h3>
+              <video
+                controls
+                style={{
+                  width: '100%',
+                  maxHeight: '400px',
+                  borderRadius: '8px',
+                  backgroundColor: '#000'
+                }}
+              >
+                <source src={recipe.video} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
             <button
               onClick={() => onShare(recipe)}
@@ -734,6 +760,8 @@ const Dashboard = () => {
   const [showQRCode, setShowQRCode] = useState(false);
   const [showEnhancedShare, setShowEnhancedShare] = useState(false);
   const [shareRecipe, setShareRecipe] = useState(null);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -749,11 +777,31 @@ const Dashboard = () => {
 
   // Fetch recipes on component mount
   useEffect(() => {
-    const fetchRecipes = async () => {
+    const fetchData = async () => {
       try {
         setLoading(prev => ({ ...prev, fetch: true }));
-        const data = await getRecipes();
-        setRecipes(data);
+
+        // Fetch recipes
+        const recipesData = await getRecipes();
+        setRecipes(recipesData);
+
+        // Fetch current user profile
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const userResponse = await fetch('https://recipedia-2si5.onrender.com/api/user/profile', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              setCurrentUser(userData);
+            }
+          } catch (userError) {
+            console.error('Error fetching user profile:', userError);
+          }
+        }
       } catch (error) {
         toast.error('Failed to fetch recipes');
         console.error('Error fetching recipes:', error);
@@ -762,7 +810,7 @@ const Dashboard = () => {
       }
     };
 
-    fetchRecipes();
+    fetchData();
   }, []);
 
   // Accessibility: Focus management
@@ -812,7 +860,7 @@ const Dashboard = () => {
   // Handle form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    
+
     // Validate form data
     const errors = validateRecipe(formData);
     if (Object.keys(errors).length > 0) {
@@ -823,11 +871,11 @@ const Dashboard = () => {
     try {
       setLoading(prev => ({ ...prev, create: true }));
       const sanitizedData = sanitizeRecipe(formData);
-      
+
       if (selectedRecipe) {
         // Handle update
         const updatedRecipe = await updateRecipe(selectedRecipe._id, sanitizedData);
-        setRecipes(prev => prev.map(recipe => 
+        setRecipes(prev => prev.map(recipe =>
           recipe._id === selectedRecipe._id ? updatedRecipe : recipe
         ));
         setSelectedRecipe(null);
@@ -838,11 +886,11 @@ const Dashboard = () => {
           ...sanitizedData,
           userId: localStorage.getItem('userId')
         });
-        
+
         setRecipes(prev => [newRecipe, ...prev]);
         toast.success('Recipe created successfully');
       }
-      
+
       // Reset form
       setShowForm(false);
       setFormData({
@@ -896,7 +944,7 @@ const Dashboard = () => {
     try {
       setLoading(prev => ({ ...prev, update: true }));
       const updatedRecipe = await updateRecipe(recipeId, updatedData);
-      setRecipes(prev => prev.map(recipe => 
+      setRecipes(prev => prev.map(recipe =>
         recipe._id === recipeId ? updatedRecipe : recipe
       ));
       setSelectedRecipe(null);
@@ -913,7 +961,7 @@ const Dashboard = () => {
   const handleRateRecipe = useCallback(async (recipeId, rating) => {
     try {
       const updatedRecipe = await updateRecipe(recipeId, { popularity: rating });
-      setRecipes(prev => prev.map(recipe => 
+      setRecipes(prev => prev.map(recipe =>
         recipe._id === recipeId ? updatedRecipe : recipe
       ));
       toast.success('Rating updated successfully');
@@ -951,6 +999,28 @@ const Dashboard = () => {
         }));
       };
       reader.readAsDataURL(file);
+    }
+  }, []);
+
+  // Add video upload handling
+  const handleVideoUpload = useCallback((e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit for videos
+        toast.error('Video size should be less than 50MB');
+        return;
+      }
+
+      // Check if it's a video file
+      if (!file.type.startsWith('video/')) {
+        toast.error('Please select a valid video file');
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        video: file
+      }));
     }
   }, []);
 
@@ -1017,55 +1087,45 @@ const Dashboard = () => {
 
   return (
     <ErrorBoundary>
-      <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Search and Filter Section */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: '1rem' 
-          }}>
-            <div style={{ flex: 1, position: 'relative', marginRight: '1rem' }}>
+      <div className="dashboard-container">
+        {/* Header Section */}
+        <div className="dashboard-header">
+          <h1 className="dashboard-title">Recipe Dashboard</h1>
+          <p className="dashboard-subtitle">
+            Create, manage, and share your delicious recipes with the world!
+          </p>
+        </div>
+
+        <div className="dashboard-content">
+          {/* Search and Actions Section */}
+          <div className="search-and-actions">
+            <div className="search-container">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => debouncedSearch(e.target.value)}
                 placeholder="Search recipes..."
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem 0.75rem 2.5rem',
-                  borderRadius: '8px',
-                  border: '1px solid #ddd',
-                  fontSize: '1rem'
-                }}
+                className="search-input"
                 aria-label="Search recipes"
               />
-              <FaSearch style={{
-                position: 'absolute',
-                left: '1rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#666'
-              }} />
+              <FaSearch className="search-icon" />
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div className="button-group">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowProfileEdit(true)}
+                className="dashboard-button button-edit-profile"
+              >
+                <FaUser /> Edit Profile
+              </motion.button>
+
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowForm(true)}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#e67e22',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
+                className="dashboard-button button-primary"
               >
                 <FaPlus /> Add Recipe
               </motion.button>
@@ -1299,12 +1359,12 @@ const Dashboard = () => {
 
         {/* Pagination Controls */}
         {filteredAndSortedRecipes.length > ITEMS_PER_PAGE && (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            gap: '1rem', 
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '1rem',
             marginTop: '2rem',
-            alignItems: 'center' 
+            alignItems: 'center'
           }}>
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
@@ -1337,7 +1397,7 @@ const Dashboard = () => {
             </button>
           </div>
         )}
-        
+
         {/* Recipe Modal */}
         {selectedRecipe && (
           <RecipeModal
@@ -1351,16 +1411,16 @@ const Dashboard = () => {
               console.log('Recipe ID:', recipe._id);
               console.log('Recipe ID type:', typeof recipe._id);
               console.log('Recipe ID length:', recipe._id?.length);
-              
+
               // Create a clean copy of the recipe to avoid any reference issues
               const cleanRecipe = {
                 ...recipe,
                 _id: String(recipe._id).trim()
               };
-              
+
               console.log('Clean recipe ID:', cleanRecipe._id);
               console.log('Clean recipe ID length:', cleanRecipe._id.length);
-              
+
               setShareRecipe(cleanRecipe);
               setShowEnhancedShare(true);
             }}
@@ -1582,6 +1642,48 @@ const Dashboard = () => {
                   )}
                 </div>
 
+                {/* Video Upload Field */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <label htmlFor="video" style={{ display: 'block', marginBottom: '0.5rem', color: '#666' }}>
+                    Recipe Video (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    id="video"
+                    name="video"
+                    accept="video/*"
+                    onChange={handleVideoUpload}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #ddd',
+                      fontSize: '1rem'
+                    }}
+                  />
+                  {formData.video && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <video
+                        controls
+                        style={{
+                          width: '100%',
+                          maxHeight: '300px',
+                          borderRadius: '8px'
+                        }}
+                      >
+                        <source src={URL.createObjectURL(formData.video)} type={formData.video.type} />
+                        Your browser does not support the video tag.
+                      </video>
+                      <p style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
+                        Video: {formData.video.name} ({(formData.video.size / (1024 * 1024)).toFixed(2)} MB)
+                      </p>
+                    </div>
+                  )}
+                  <small style={{ color: '#666' }}>
+                    Upload a cooking video or tutorial (Max 50MB, MP4/MOV/AVI formats)
+                  </small>
+                </div>
+
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
@@ -1634,7 +1736,7 @@ const Dashboard = () => {
           <h2 style={{ fontSize: '1.5rem', color: '#2c3e50', marginBottom: '1rem' }}>
             Your Recipe Matches
           </h2>
-          
+
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -1646,8 +1748,8 @@ const Dashboard = () => {
                 <FaSpinner className="spinner" size={40} style={{ color: '#e67e22' }} />
               </div>
             ) : recipes.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
+              <div style={{
+                textAlign: 'center',
                 padding: '40px',
                 backgroundColor: '#fff',
                 borderRadius: '8px',
@@ -1675,12 +1777,12 @@ const Dashboard = () => {
 
           {/* Pagination Controls for recipe matches */}
           {recipes.length > ITEMS_PER_PAGE && (
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              gap: '1rem', 
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '1rem',
               marginTop: '2rem',
-              alignItems: 'center' 
+              alignItems: 'center'
             }}>
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
@@ -1713,22 +1815,37 @@ const Dashboard = () => {
               </button>
             </div>
           )}
+          {/* Enhanced Share Modal */}
+          <AnimatePresence>
+            {showEnhancedShare && shareRecipe && (
+              <EnhancedShare
+                key="enhanced-share"
+                recipe={shareRecipe}
+                onClose={() => {
+                  setShowEnhancedShare(false);
+                  setShareRecipe(null);
+                }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Creator Profile Edit Modal */}
+          <AnimatePresence>
+            {showProfileEdit && currentUser && (
+              <CreatorProfileEdit
+                key="profile-edit"
+                user={currentUser}
+                onClose={() => setShowProfileEdit(false)}
+                onUpdate={(updatedUser) => {
+                  setCurrentUser(updatedUser);
+                  setShowProfileEdit(false);
+                  toast.success('Profile updated successfully!');
+                }}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </div>
-
-      {/* Enhanced Share Modal */}
-      <AnimatePresence>
-        {showEnhancedShare && shareRecipe && (
-          <EnhancedShare
-            key="enhanced-share"
-            recipe={shareRecipe}
-            onClose={() => {
-              setShowEnhancedShare(false);
-              setShareRecipe(null);
-            }}
-          />
-        )}
-      </AnimatePresence>
     </ErrorBoundary>
   );
 };
