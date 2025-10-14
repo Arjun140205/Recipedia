@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import FridgeMate from './pages/FridgeMate';
 import Recipes from './pages/Recipes';
+import Creators from './pages/Creators';
+import CreatorProfile from './pages/CreatorProfile';
 import Navbar from './component/Navbar';
 import PrivateRoute from './component/PrivateRoute';
 import Footer from './component/Footer';
@@ -17,7 +19,8 @@ function App() {
   const currentPath = window.location.pathname;
   const showFooter =
     currentPath !== '/recipes' &&
-    currentPath !== '/about'; // '/about' also shows recipes for backward compatibility
+    currentPath !== '/about' &&
+    !currentPath.startsWith('/creator/'); // '/about' also shows recipes for backward compatibility
 
   return (
     <>
@@ -27,6 +30,8 @@ function App() {
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/about" element={<Recipes />} />
         <Route path="/fridge-mate" element={<FridgeMate />} />
+        <Route path="/creators" element={<Creators />} />
+        <Route path="/creator/:userId" element={<CreatorProfile />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route
