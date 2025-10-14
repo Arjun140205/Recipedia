@@ -718,26 +718,49 @@ app.put('/api/user/profile', authenticateJWT, upload.single('avatar'), async (re
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const { displayName, bio, location, specialties } = req.body;
+    const { displayName, email, bio, location, specialties } = req.body;
     
+    // Update basic user fields
+    if (email && email !== user.email) {
+      // Check if email is already taken
+      const existingUser = await User.findOne({ email, _id: { $ne: user._id } });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Email already in use' });
+      }
+      user.email = email;
+    }
+    
+    // Update profile fields
     if (displayName) user.profile.displayName = displayName;
-    if (bio) user.profile.bio = bio;
-    if (location) user.profile.location = location;
+    if (bio !== undefined) user.profile.bio = bio;
+    if (location !== undefined) user.profile.location = location;
     if (specialties) {
       user.profile.specialties = typeof specialties === 'string' 
-        ? specialties.split(',').map(s => s.trim()) 
+        ? specialties.split(',').map(s => s.trim()).filter(Boolean)
         : specialties;
     }
 
     if (req.file) {
+      // Delete old avatar if it exists
+      if (user.profile.avatar) {
+        const oldAvatarPath = path.join(__dirname, user.profile.avatar);
+        if (fs.existsSync(oldAvatarPath)) {
+          fs.unlinkSync(oldAvatarPath);
+        }
+      }
       user.profile.avatar = `/uploads/${path.basename(req.file.path)}`;
     }
 
     await user.save();
-    res.json({ message: 'Profile updated successfully', user: user });
+    
+    // Return user without password
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    
+    res.json({ message: 'Profile updated successfully', user: userResponse });
   } catch (error) {
     console.error('Error updating profile:', error);
-    res.status(500).json({ error: 'Error updating profile' });
+    res.status(500).json({ error: 'Error updating profile', details: error.message });
   }
 });
 
