@@ -11,6 +11,48 @@ const UserSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
+  profile: {
+    displayName: {
+      type: String,
+      default: function() { return this.username; }
+    },
+    bio: {
+      type: String,
+      maxLength: 500,
+      default: ''
+    },
+    avatar: {
+      type: String,
+      default: ''
+    },
+    location: {
+      type: String,
+      default: ''
+    },
+    specialties: [{
+      type: String
+    }],
+    isCreator: {
+      type: Boolean,
+      default: true
+    },
+    followers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    following: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    totalRecipes: {
+      type: Number,
+      default: 0
+    },
+    totalLikes: {
+      type: Number,
+      default: 0
+    }
+  },
   pantryIngredients: [{
     name: {
       type: String,
