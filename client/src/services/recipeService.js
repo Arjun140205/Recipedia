@@ -49,9 +49,9 @@ export const getRecipes = async () => {
 export const createRecipe = async (recipeData) => {
   const formData = new FormData();
 
-  // Handle all fields except image first
+  // Handle all fields except image and video first
   Object.keys(recipeData).forEach(key => {
-    if (key !== 'image') {
+    if (key !== 'image' && key !== 'video') {
       formData.append(key, recipeData[key]);
     }
   });
@@ -76,6 +76,11 @@ export const createRecipe = async (recipeData) => {
     } else if (recipeData.image instanceof File) {
       formData.append('image', recipeData.image);
     }
+  }
+
+  // Handle video separately
+  if (recipeData.video && recipeData.video instanceof File) {
+    formData.append('video', recipeData.video);
   }
 
   try {
@@ -97,9 +102,9 @@ export const createRecipe = async (recipeData) => {
 export const updateRecipe = async (id, recipeData) => {
   const formData = new FormData();
 
-  // Handle all fields except image first
+  // Handle all fields except image and video first
   Object.keys(recipeData).forEach(key => {
-    if (key !== 'image') {
+    if (key !== 'image' && key !== 'video') {
       formData.append(key, recipeData[key]);
     }
   });
@@ -124,6 +129,11 @@ export const updateRecipe = async (id, recipeData) => {
     } else if (recipeData.image instanceof File) {
       formData.append('image', recipeData.image);
     }
+  }
+
+  // Handle video separately
+  if (recipeData.video && recipeData.video instanceof File) {
+    formData.append('video', recipeData.video);
   }
 
   try {
