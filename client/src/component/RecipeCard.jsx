@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { FaTimes, FaStar, FaCheckCircle } from 'react-icons/fa';
+import { FaTimes, FaCheckCircle } from 'react-icons/fa';
 
 const RecipeCard = ({ recipe, onSelect, onDelete }) => {
   const [imageError, setImageError] = useState(false);
