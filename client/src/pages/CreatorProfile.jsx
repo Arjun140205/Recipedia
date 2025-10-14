@@ -303,35 +303,49 @@ const CreatorProfile = () => {
     <div style={{
       maxWidth: '1200px',
       margin: '0 auto',
-      padding: '2rem'
+      padding: window.innerWidth < 768 ? '1rem' : '2rem',
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, rgba(230, 126, 34, 0.1) 0%, rgba(255, 255, 255, 0.1) 100%)'
     }}>
       {/* Creator Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         style={{
-          backgroundColor: 'white',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           borderRadius: '16px',
-          padding: '2rem',
+          padding: window.innerWidth < 768 ? '1.5rem' : '2rem',
           marginBottom: '3rem',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.3)'
         }}
       >
         <div style={{
           display: 'flex',
-          gap: '2rem',
-          alignItems: 'center',
-          flexWrap: 'wrap'
+          gap: window.innerWidth < 768 ? '1rem' : '2rem',
+          alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+          textAlign: window.innerWidth < 768 ? 'center' : 'left'
         }}>
           <img
-            src={creator.profile.avatar || '/default-avatar.jpg'}
+            src={creator.profile.avatar ? 
+              (creator.profile.avatar.startsWith('http') ? 
+                creator.profile.avatar : 
+                `https://recipedia-2si5.onrender.com${creator.profile.avatar}`) : 
+              '/default-avatar.jpg'}
             alt={creator.profile.displayName}
+            onError={(e) => {
+              e.target.src = '/default-avatar.jpg';
+            }}
             style={{
-              width: '150px',
-              height: '150px',
+              width: window.innerWidth < 768 ? '120px' : '150px',
+              height: window.innerWidth < 768 ? '120px' : '150px',
               borderRadius: '50%',
               objectFit: 'cover',
-              border: '4px solid #e67e22'
+              border: '4px solid #e67e22',
+              alignSelf: window.innerWidth < 768 ? 'center' : 'flex-start'
             }}
           />
           
@@ -344,6 +358,19 @@ const CreatorProfile = () => {
               {creator.profile.displayName}
             </h1>
             
+            {creator.email && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.5rem',
+                color: '#666'
+              }}>
+                <span>📧</span>
+                <span>{creator.email}</span>
+              </div>
+            )}
+
             {creator.profile.location && (
               <div style={{
                 display: 'flex',
