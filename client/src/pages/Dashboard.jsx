@@ -22,14 +22,10 @@ import {
   FaPrint,
   FaList,
   FaChartLine,
-  FaFacebook,
-  FaTwitter,
-  FaWhatsapp,
-  FaCopy,
-  FaQrcode,
   FaCircle
 } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
+import EnhancedShare from '../component/EnhancedShare';
 
 const RECIPE_CATEGORIES = {
   meals: {
@@ -305,9 +301,9 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
   );
 }; */
 
-const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, onQRCodeClose }) => {
+const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, onShare, showQRCode, onQRCodeClose }) => {
   const [activeTab, setActiveTab] = useState('ingredients');
-  const [showShareOptions, setShowShareOptions] = useState(false);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Add safety check for recipe
@@ -325,37 +321,7 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, 
     onClose();
   };
 
-  // Share options with their actions
-  const shareOptions = [
-    {
-      name: 'Copy Link',
-      icon: <FaCopy />,
-      action: () => {
-        navigator.clipboard.writeText(window.location.href);
-        toast.success('Link copied to clipboard!');
-      }
-    },
-    {
-      name: 'Facebook',
-      icon: <FaFacebook />,
-      action: () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${window.location.href}`, '_blank')
-    },
-    {
-      name: 'Twitter',
-      icon: <FaTwitter />,
-      action: () => window.open(`https://twitter.com/intent/tweet?url=${window.location.href}`, '_blank')
-    },
-    {
-      name: 'WhatsApp',
-      icon: <FaWhatsapp />,
-      action: () => window.open(`https://api.whatsapp.com/send?text=${window.location.href}`, '_blank')
-    },
-    {
-      name: 'QR Code',
-      icon: <FaQrcode />,
-      action: () => onQRCodeClose()
-    }
-  ];
+
 
   // Process ingredients and instructions with safety checks
   const ingredientsList = recipe.ingredients ? recipe.ingredients.split('\n').filter(Boolean) : [];
@@ -464,7 +430,7 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, 
         <div style={{ padding: '2rem' }}>
           <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
             <button
-              onClick={() => setShowShareOptions(!showShareOptions)}
+              onClick={() => onShare(recipe)}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: '#f8f9fa',
@@ -581,44 +547,7 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, showQRCode, 
         </div>
       </div>
 
-      {showShareOptions && (
-        <div style={{
-          position: 'absolute',
-          top: '1rem',
-          right: '5rem',
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          padding: '1rem',
-          zIndex: 1001
-        }}>
-          {shareOptions.map((option) => (
-            <button
-              key={option.name}
-              onClick={() => {
-                option.action();
-                setShowShareOptions(false);
-              }}
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                color: '#333',
-                textAlign: 'left'
-              }}
-            >
-              {option.icon}
-              {option.name}
-            </button>
-          ))}
-        </div>
-      )}
+
 
       {showQRCode && (
         <div style={{
@@ -803,6 +732,8 @@ const Dashboard = () => {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [showEnhancedShare, setShowEnhancedShare] = useState(false);
+  const [shareRecipe, setShareRecipe] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -810,7 +741,10 @@ const Dashboard = () => {
     instructions: '',
     prepTime: '',
     category: '',
-    image: ''
+    image: '',
+    video: '',
+    tags: '',
+    isPublic: true
   });
 
   // Fetch recipes on component mount
@@ -918,7 +852,10 @@ const Dashboard = () => {
         instructions: '',
         prepTime: '',
         category: '',
-        image: ''
+        image: '',
+        video: '',
+        tags: '',
+        isPublic: true
       });
     } catch (error) {
       console.error('Error saving recipe:', error);
@@ -1409,7 +1346,24 @@ const Dashboard = () => {
             onDelete={() => handleDelete(selectedRecipe._id)}
             onUpdate={(updatedData) => handleUpdate(selectedRecipe._id, updatedData)}
             onRate={(rating) => handleRateRecipe(selectedRecipe._id, rating)}
-            
+            onShare={(recipe) => {
+              console.log('Share button clicked for recipe:', recipe);
+              console.log('Recipe ID:', recipe._id);
+              console.log('Recipe ID type:', typeof recipe._id);
+              console.log('Recipe ID length:', recipe._id?.length);
+              
+              // Create a clean copy of the recipe to avoid any reference issues
+              const cleanRecipe = {
+                ...recipe,
+                _id: String(recipe._id).trim()
+              };
+              
+              console.log('Clean recipe ID:', cleanRecipe._id);
+              console.log('Clean recipe ID length:', cleanRecipe._id.length);
+              
+              setShareRecipe(cleanRecipe);
+              setShowEnhancedShare(true);
+            }}
             showQRCode={showQRCode}
             onQRCodeClose={() => setShowQRCode(false)}
           />
@@ -1761,6 +1715,20 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Enhanced Share Modal */}
+      <AnimatePresence>
+        {showEnhancedShare && shareRecipe && (
+          <EnhancedShare
+            key="enhanced-share"
+            recipe={shareRecipe}
+            onClose={() => {
+              setShowEnhancedShare(false);
+              setShareRecipe(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </ErrorBoundary>
   );
 };
