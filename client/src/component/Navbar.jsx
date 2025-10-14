@@ -69,10 +69,11 @@ const Navbar = () => {
     { path: '/', label: 'Home', icon: FiHome },
     { path: '/recipes', label: 'Recipes', icon: FiBook },
     { path: '/fridge-mate', label: 'Fridge Mate', icon: FiShoppingCart },
+    { path: '/creators', label: 'Creators', icon: FiUser },
   ];
 
   if (isAuthenticated) {
-    navItems.push({ path: '/dashboard', label: 'My Recipes', icon: FiUser });
+    navItems.push({ path: '/dashboard', label: 'My Recipes', icon: FiBook });
   }
 
   const navStyles = {
