@@ -30,6 +30,10 @@ const RecipeSchema = new mongoose.Schema({
   image: { 
     type: String 
   },
+  video: {
+    type: String,
+    default: ''
+  },
   category: {
     type: String,
     required: true
@@ -66,6 +70,31 @@ const RecipeSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  likes: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  totalLikes: {
+    type: Number,
+    default: 0
+  },
+  shares: {
+    type: Number,
+    default: 0
+  },
+  isPublic: {
+    type: Boolean,
+    default: true
+  },
+  tags: [{
+    type: String
+  }],
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
