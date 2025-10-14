@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = 'https://recipedia-2si5.onrender.com/api';
 const RECIPES_URL = `${BASE_URL}/recipes`;
 
 const getAuthHeader = () => {
@@ -13,14 +13,31 @@ const getAuthHeader = () => {
 // Helper function to normalize recipe data for frontend compatibility
 const normalizeRecipe = (recipe) => {
   if (!recipe) return recipe;
-  
+
   const normalized = { ...recipe };
-  
+
   // Convert ingredients array to string if needed
   if (normalized.ingredients && Array.isArray(normalized.ingredients)) {
     normalized.ingredients = normalized.ingredients.map(ing => ing.name).join('\n');
   }
-  
+
+  // Ensure recipe has a valid _id
+  if (normalized._id) {
+    // Clean and validate the ID
+    normalized._id = String(normalized._id).trim();
+    
+    if (normalized._id.length !== 24) {
+      console.warn('Recipe has invalid _id length:', normalized._id.length, 'ID:', normalized._id, 'Recipe:', normalized);
+      // Don't replace valid IDs, just mark them for special handling
+      normalized.hasInvalidId = true;
+    }
+  } else {
+    console.warn('Recipe missing _id:', normalized);
+    // Generate a temporary ID for display purposes
+    normalized._id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    normalized.isTemporary = true;
+  }
+
   return normalized;
 };
 
@@ -31,7 +48,7 @@ export const getRecipes = async () => {
 
 export const createRecipe = async (recipeData) => {
   const formData = new FormData();
-  
+
   // Handle all fields except image first
   Object.keys(recipeData).forEach(key => {
     if (key !== 'image') {
@@ -51,7 +68,7 @@ export const createRecipe = async (recipeData) => {
         ia[i] = byteString.charCodeAt(i);
       }
       const blob = new Blob([ab], { type: mimeString });
-      
+
       // Generate a unique filename
       const timestamp = Date.now();
       const filename = `image-${timestamp}.${mimeString.split('/')[1]}`;
@@ -79,7 +96,7 @@ export const createRecipe = async (recipeData) => {
 
 export const updateRecipe = async (id, recipeData) => {
   const formData = new FormData();
-  
+
   // Handle all fields except image first
   Object.keys(recipeData).forEach(key => {
     if (key !== 'image') {
@@ -99,7 +116,7 @@ export const updateRecipe = async (id, recipeData) => {
         ia[i] = byteString.charCodeAt(i);
       }
       const blob = new Blob([ab], { type: mimeString });
-      
+
       // Generate a unique filename
       const timestamp = Date.now();
       const filename = `image-${timestamp}.${mimeString.split('/')[1]}`;
