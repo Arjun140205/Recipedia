@@ -4,8 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Recipedia</title>
+    
+    <!-- LCP Optimization: Preconnect to API -->
+    <link rel="preconnect" href="https://recipedia-2si5.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://recipedia-2si5.onrender.com" />
+    
     <!-- Link to favicon if you have one -->
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    
+    <!-- LCP Optimization: Inline critical CSS for faster initial render -->
+    <style>
+      /* Critical CSS for initial render */
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      
+      #root {
+        min-height: 100vh;
+      }
+      
+      /* Prevent layout shift during load */
+      .dashboard-container {
+        min-height: 100vh;
+      }
+    </style>
+    
     <!-- Add any other meta tags, external CSS, fonts here -->
   </head>
   <body>
