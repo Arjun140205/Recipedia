@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, Profiler } from 'react';
 import React from 'react';
 import DOMPurify from 'dompurify';
-import { createRecipe, getRecipes, deleteRecipe, updateRecipe } from '../services/recipeService';
+import { createRecipe, updateRecipe as updateRecipeAPI } from '../services/recipeService';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -14,8 +14,6 @@ import {
   FaSort,
   FaSave,
   FaStar,
-  FaRegStar,
-  FaStarHalfAlt,
   FaFire,
   FaClock,
   FaShare,
@@ -29,6 +27,10 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import EnhancedShare from '../component/EnhancedShare';
 import CreatorProfileEdit from '../component/CreatorProfileEdit';
+import RecipeGrid from '../components/RecipeGrid';
+import VirtualizedRecipeGrid from '../components/VirtualizedRecipeGrid';
+import FoodLoader from '../components/FoodLoader';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import '../styles/dashboard.css';
 
 const RECIPE_CATEGORIES = {
@@ -78,218 +80,7 @@ const SORT_OPTIONS = [
   { value: 'title', label: 'Alphabetical', icon: '🔤' }
 ];
 
-const StarRating = ({ rating, onRate, size = '1.2rem', interactive = false }) => {
-  const stars = [];
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 !== 0;
-
-  for (let i = 1; i <= 5; i++) {
-    if (i <= fullStars) {
-      stars.push(
-        <FaStar
-          key={i}
-          style={{
-            color: '#e67e22',
-            fontSize: size,
-            cursor: interactive ? 'pointer' : 'default'
-          }}
-          onClick={() => interactive && onRate(i)}
-        />
-      );
-    } else if (i === fullStars + 1 && hasHalfStar) {
-      stars.push(
-        <FaStarHalfAlt
-          key={i}
-          style={{
-            color: '#e67e22',
-            fontSize: size,
-            cursor: interactive ? 'pointer' : 'default'
-          }}
-          onClick={() => interactive && onRate(i - 0.5)}
-        />
-      );
-    } else {
-      stars.push(
-        <FaRegStar
-          key={i}
-          style={{
-            color: '#e67e22',
-            fontSize: size,
-            cursor: interactive ? 'pointer' : 'default'
-          }}
-          onClick={() => interactive && onRate(i)}
-        />
-      );
-    }
-  }
-
-  return (
-    <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
-      {stars}
-      {interactive && (
-        <span style={{
-          marginLeft: '0.5rem',
-          fontSize: '0.9rem',
-          color: '#666'
-        }}>
-          {rating.toFixed(1)}
-        </span>
-      )}
-    </div>
-  );
-};
-
-// Memoized RecipeCard to prevent unnecessary re-renders
-const RecipeCard = React.memo(({ recipe, onSelect, onDelete, onRate, isNew }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-
-  const handleDelete = (e) => {
-    e.stopPropagation(); // Prevent opening the modal when clicking delete
-    if (window.confirm('Are you sure you want to delete this recipe?')) {
-      onDelete();
-    }
-  };
-
-  const handleImageError = () => {
-    setImageError(true);
-  };
-
-  // Only animate if it's a new recipe
-  const CardWrapper = isNew ? motion.div : 'div';
-  const animationProps = isNew ? {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.3 }
-  } : {};
-
-  return (
-    <CardWrapper
-      {...animationProps}
-      style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        cursor: 'pointer',
-        position: 'relative',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-5px)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-      }}
-      onClick={onSelect}
-      role="button"
-      tabIndex={0}
-      onKeyPress={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onSelect();
-        }
-      }}
-    >
-      {/* Delete button */}
-      <button
-        onClick={handleDelete}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          zIndex: 2,
-          backgroundColor: 'rgba(255, 59, 48, 0.9)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '50%',
-          width: '32px',
-          height: '32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          opacity: 0,
-          transition: 'opacity 0.2s ease',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-        onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-      >
-        <FaTimes />
-      </button>
-
-      <div style={{ position: 'relative', height: '200px' }}>
-        <img
-          src={imageError ? '/default-recipe-image.jpg' : recipe.image}
-          alt={DOMPurify.sanitize(recipe.title)}
-          onError={handleImageError}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: imageLoaded ? 1 : 0,
-            transition: 'opacity 0.3s ease'
-          }}
-          onLoad={() => setImageLoaded(true)}
-          loading="lazy"
-        />
-        <div style={{
-          position: 'absolute',
-          top: '1rem',
-          right: '1rem',
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          padding: '0.5rem 1rem',
-          borderRadius: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          backdropFilter: 'blur(4px)'
-        }}>
-          <FaClock color="#666" />
-          <span>{recipe.prepTime} mins</span>
-        </div>
-      </div>
-      <div style={{ padding: '1.5rem' }}>
-        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', color: '#333' }}>
-          {DOMPurify.sanitize(recipe.title)}
-        </h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <span style={{
-            backgroundColor: '#f8f9fa',
-            padding: '0.25rem 0.75rem',
-            borderRadius: '20px',
-            fontSize: '0.9rem',
-            color: '#666'
-          }}>
-            {recipe.category}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <FaStar color="#FFD700" />
-            <span>{recipe.popularity}</span>
-          </div>
-        </div>
-        <StarRating
-          rating={recipe.popularity}
-          onRate={(rating) => onRate(rating)}
-          interactive={true}
-          size="1.2rem"
-        />
-      </div>
-    </CardWrapper>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison function for React.memo
-  // Only re-render if these specific props change
-  return (
-    prevProps.recipe._id === nextProps.recipe._id &&
-    prevProps.recipe.title === nextProps.recipe.title &&
-    prevProps.recipe.popularity === nextProps.recipe.popularity &&
-    prevProps.recipe.image === nextProps.recipe.image &&
-    prevProps.isNew === nextProps.isNew
-  );
-});
+// RecipeCard and StarRating moved to separate files for better optimization
 
 // SharePreview component commented out as it's not being used
 /* const SharePreview = ({ recipe }) => {
@@ -755,9 +546,26 @@ class ErrorBoundary extends React.Component {
 // Removed generateUniqueKey - now using stable recipe._id as keys directly
 
 const Dashboard = () => {
-  const [recipes, setRecipes] = useState([]);
+  // Use custom hook for infinite scroll logic (ISOLATED)
+  // PHASE 2: Now returns normalized data (byId, allIds)
+  // PHASE 3: Added loadMore for virtualization
+  const {
+    recipesById,
+    recipeIds,
+    loading: recipesLoading,
+    initialLoading,
+    hasMore,
+    newRecipeIds,
+    loadedPages,
+    currentPage,
+    addRecipe,
+    updateRecipe: updateRecipeInCache,
+    deleteRecipe: deleteRecipeFromCache,
+    loadMore
+  } = useInfiniteScroll(12);
+
+  // UI state (separate from data state)
   const [loading, setLoading] = useState({
-    fetch: false,
     create: false,
     update: false,
     delete: false
@@ -775,6 +583,8 @@ const Dashboard = () => {
   const [shareRecipe, setShareRecipe] = useState(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [useVirtualization, setUseVirtualization] = useState(true); // PHASE 3: Toggle virtualization
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -788,147 +598,45 @@ const Dashboard = () => {
     isPublic: true
   });
 
-  // Infinite scroll state
-  const [hasMore, setHasMore] = useState(true);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  const currentPageRef = useRef(1); // Track current page without causing re-renders
-  const loadedPagesRef = useRef(new Set([1])); // Use ref to avoid re-renders
-  const isLoadingRef = useRef(false); // Track loading state without causing re-renders
-  const newRecipeIdsRef = useRef(new Set()); // Track newly added recipe IDs for animation
-  const ITEMS_PER_PAGE = 12;
-
-  // Fetch recipes on component mount
+  // Fetch user profile on mount (recipes handled by useInfiniteScroll hook)
   useEffect(() => {
-    const fetchInitialData = async () => {
-      if (isLoadingRef.current) return;
-      
-      try {
-        isLoadingRef.current = true;
-        setLoading(prev => ({ ...prev, fetch: true }));
-
-        // Fetch first page of recipes
-        const recipesData = await getRecipes(1, ITEMS_PER_PAGE);
-        setRecipes(recipesData.recipes);
-        setHasMore(recipesData.currentPage < recipesData.totalPages);
-        loadedPagesRef.current = new Set([1]);
-
-        // Fetch current user profile
-        const token = localStorage.getItem('token');
-        if (token) {
-          try {
-            const userResponse = await fetch('https://recipedia-2si5.onrender.com/api/user/profile', {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            if (userResponse.ok) {
-              const userData = await userResponse.json();
-              setCurrentUser(userData);
+    const fetchUserProfile = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const userResponse = await fetch('https://recipedia-2si5.onrender.com/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`
             }
-          } catch (userError) {
-            console.error('Error fetching user profile:', userError);
+          });
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            setCurrentUser(userData);
           }
+        } catch (userError) {
+          console.error('Error fetching user profile:', userError);
         }
-      } catch (error) {
-        toast.error('Failed to fetch recipes');
-        console.error('Error fetching recipes:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, fetch: false }));
-        isLoadingRef.current = false;
       }
     };
 
-    fetchInitialData();
+    fetchUserProfile();
   }, []);
 
-  // Infinite scroll: Load more recipes when scrolling near bottom
-  const loadMoreRecipes = useCallback(async (pageToLoad) => {
-    // Check if already loading or page already loaded
-    if (isLoadingRef.current || loadedPagesRef.current.has(pageToLoad)) {
-      console.log('Skipping load - already loading or page loaded:', pageToLoad);
-      return;
-    }
-
-    console.log('Loading page:', pageToLoad);
-    
-    try {
-      isLoadingRef.current = true;
-      setLoading(prev => ({ ...prev, fetch: true }));
-      
-      const recipesData = await getRecipes(pageToLoad, ITEMS_PER_PAGE);
-      
-      // Append new recipes to existing ones (caching)
-      setRecipes(prev => {
-        // Filter out any duplicates by ID
-        const existingIds = new Set(prev.map(r => r._id));
-        const newRecipes = recipesData.recipes.filter(r => !existingIds.has(r._id));
-        
-        // Mark new recipes for animation
-        newRecipes.forEach(r => newRecipeIdsRef.current.add(r._id));
-        
-        // Clear animation flags after 500ms
-        setTimeout(() => {
-          newRecipes.forEach(r => newRecipeIdsRef.current.delete(r._id));
-        }, 500);
-        
-        return [...prev, ...newRecipes];
-      });
-      
-      setHasMore(recipesData.currentPage < recipesData.totalPages);
-      loadedPagesRef.current.add(pageToLoad);
-      
-      console.log('Loaded page:', pageToLoad, 'New recipes:', recipesData.recipes.length);
-      
-    } catch (error) {
-      console.error('Error loading more recipes:', error);
-      toast.error('Failed to load more recipes');
-    } finally {
-      setLoading(prev => ({ ...prev, fetch: false }));
-      isLoadingRef.current = false;
-    }
-  }, []);
-
-  // Scroll event handler with throttling
+  // Scroll to top button visibility
   useEffect(() => {
-    let scrollTimeout;
-    
     const handleScroll = () => {
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = document.documentElement.clientHeight;
-
-      // Show scroll to top button when scrolled down
       setShowScrollTop(scrollTop > 300);
-
-      // Throttle scroll events
-      if (scrollTimeout) return;
-      
-      scrollTimeout = setTimeout(() => {
-        scrollTimeout = null;
-        
-        // Load more when user scrolls to 80% of the page
-        if (!isLoadingRef.current && hasMore && scrollTop + clientHeight >= scrollHeight * 0.8) {
-          const nextPage = currentPageRef.current + 1;
-          // Only trigger load if this page hasn't been loaded yet
-          if (!loadedPagesRef.current.has(nextPage)) {
-            currentPageRef.current = nextPage;
-            loadMoreRecipes(nextPage);
-          }
-        }
-      }, 200); // Throttle to 200ms
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-    };
-  }, [hasMore, loadMoreRecipes]);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Scroll to top function
-  const scrollToTop = () => {
+  const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
   // Accessibility: Focus management
   useEffect(() => {
@@ -942,7 +650,74 @@ const Dashboard = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showModal, selectedRecipe]);
 
+  // PHASE 2: Memoized filtered and sorted recipe IDs (OPTIMIZED)
+  // Returns IDs only, not full objects - preserves object identity
+  const displayedRecipeIds = useMemo(() => {
+    console.log('[Dashboard] Filtering recipes. Total cached:', recipeIds.length);
+    
+    // Filter IDs based on recipe data
+    const filteredIds = recipeIds.filter(id => {
+      const recipe = recipesById[id];
+      if (!recipe) return false;
+      
+      const matchesSearch = !searchQuery || recipe.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || recipe.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
 
+    // Sort IDs based on recipe data
+    const sortedIds = [...filteredIds].sort((idA, idB) => {
+      const a = recipesById[idA];
+      const b = recipesById[idB];
+      
+      switch (sortOption) {
+        case 'popular':
+          return (b.popularity || 0) - (a.popularity || 0);
+        case 'recent':
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        case 'quick':
+          return parseInt(a.prepTime || 0) - parseInt(b.prepTime || 0);
+        case 'alpha':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+
+    console.log('[Dashboard] Displayed recipe IDs after filter/sort:', sortedIds.length);
+    return sortedIds;
+  }, [recipeIds, recipesById, searchQuery, selectedCategory, sortOption]);
+
+  // Stable callbacks (WRAPPED IN useCallback)
+  const handleSelectRecipe = useCallback((recipe) => {
+    setSelectedRecipe(recipe);
+  }, []);
+
+  const handleDeleteRecipe = useCallback(async (recipeId) => {
+    if (window.confirm('Are you sure you want to delete this recipe?')) {
+      try {
+        setLoading(prev => ({ ...prev, delete: true }));
+        await deleteRecipeFromCache(recipeId);
+        toast.success('Recipe deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete recipe');
+        console.error('Error deleting recipe:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, delete: false }));
+      }
+    }
+  }, [deleteRecipeFromCache]);
+
+  const handleRateRecipe = useCallback(async (recipeId, rating) => {
+    try {
+      const updatedRecipe = await updateRecipeAPI(recipeId, { popularity: rating });
+      updateRecipeInCache(recipeId, updatedRecipe);
+      toast.success('Rating updated successfully');
+    } catch (error) {
+      toast.error('Failed to update rating');
+      console.error('Error updating rating:', error);
+    }
+  }, [updateRecipeInCache]);
 
   // Performance optimization: Debounced search
   const debouncedSearch = useCallback((value) => {
@@ -969,10 +744,8 @@ const Dashboard = () => {
 
       if (selectedRecipe) {
         // Handle update
-        const updatedRecipe = await updateRecipe(selectedRecipe._id, sanitizedData);
-        setRecipes(prev => prev.map(recipe =>
-          recipe._id === selectedRecipe._id ? updatedRecipe : recipe
-        ));
+        const updatedRecipe = await updateRecipeAPI(selectedRecipe._id, sanitizedData);
+        updateRecipeInCache(selectedRecipe._id, updatedRecipe);
         setSelectedRecipe(null);
         toast.success('Recipe updated successfully');
       } else {
@@ -982,17 +755,8 @@ const Dashboard = () => {
           userId: localStorage.getItem('userId')
         });
 
-        // Mark as new for animation
-        newRecipeIdsRef.current.add(newRecipe._id);
-        
-        // Prepend new recipe to the cached list
-        setRecipes(prev => [newRecipe, ...prev]);
-        
-        // Clear animation flag after 500ms
-        setTimeout(() => {
-          newRecipeIdsRef.current.delete(newRecipe._id);
-        }, 500);
-        
+        // Add to cache (hook handles animation)
+        addRecipe(newRecipe);
         toast.success('Recipe created successfully');
       }
 
@@ -1016,7 +780,7 @@ const Dashboard = () => {
     } finally {
       setLoading(prev => ({ ...prev, create: false }));
     }
-  }, [formData, selectedRecipe]);
+  }, [formData, selectedRecipe, addRecipe, updateRecipeInCache]);
 
   // Handle form input changes
   const handleInputChange = useCallback((e) => {
@@ -1027,56 +791,7 @@ const Dashboard = () => {
     }));
   }, []);
 
-  // Handle recipe deletion
-  const handleDelete = useCallback(async (recipeId) => {
-    if (window.confirm('Are you sure you want to delete this recipe?')) {
-      try {
-        setLoading(prev => ({ ...prev, delete: true }));
-        await deleteRecipe(recipeId);
-        
-        // Remove from cached recipes
-        setRecipes(prev => prev.filter(recipe => recipe._id !== recipeId));
-        toast.success('Recipe deleted successfully');
-      } catch (error) {
-        toast.error('Failed to delete recipe');
-        console.error('Error deleting recipe:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, delete: false }));
-      }
-    }
-  }, []);
-
-  // Handle recipe update
-  const handleUpdate = useCallback(async (recipeId, updatedData) => {
-    try {
-      setLoading(prev => ({ ...prev, update: true }));
-      const updatedRecipe = await updateRecipe(recipeId, updatedData);
-      setRecipes(prev => prev.map(recipe =>
-        recipe._id === recipeId ? updatedRecipe : recipe
-      ));
-      setSelectedRecipe(null);
-      toast.success('Recipe updated successfully');
-    } catch (error) {
-      toast.error('Failed to update recipe');
-      console.error('Error updating recipe:', error);
-    } finally {
-      setLoading(prev => ({ ...prev, update: false }));
-    }
-  }, []);
-
-  // Handle recipe rating
-  const handleRateRecipe = useCallback(async (recipeId, rating) => {
-    try {
-      const updatedRecipe = await updateRecipe(recipeId, { popularity: rating });
-      setRecipes(prev => prev.map(recipe =>
-        recipe._id === recipeId ? updatedRecipe : recipe
-      ));
-      toast.success('Rating updated successfully');
-    } catch (error) {
-      toast.error('Failed to update rating');
-      console.error('Error updating rating:', error);
-    }
-  }, []);
+  // Old handlers removed - now using stable callbacks defined above
 
   // Handle image load
   // Using the onLoad property directly in the image element instead
@@ -1131,34 +846,7 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Filter and sort all cached recipes (memoized for performance)
-  const displayedRecipes = useMemo(() => {
-    console.log('Recalculating displayed recipes. Total cached:', recipes.length);
-    
-    const filtered = recipes.filter(recipe => {
-      const matchesSearch = !searchQuery || recipe.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || recipe.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortOption) {
-        case 'popular':
-          return (b.popularity || 0) - (a.popularity || 0);
-        case 'recent':
-          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-        case 'quick':
-          return parseInt(a.prepTime || 0) - parseInt(b.prepTime || 0);
-        case 'alpha':
-          return a.title.localeCompare(b.title);
-        default:
-          return 0;
-      }
-    });
-
-    console.log('Displayed recipes after filter/sort:', sorted.length);
-    return sorted;
-  }, [recipes, searchQuery, selectedCategory, sortOption]);
+  // Duplicate displayedRecipes removed - using the one defined earlier
 
   // handleIngredientsUpdate and handleFilterChange functions commented out as they're not being used
   /* const handleIngredientsUpdate = async (ingredients) => {
@@ -1212,6 +900,23 @@ const Dashboard = () => {
     }));
   }; */
 
+  // Show fancy loader during initial fetch
+  if (initialLoading) {
+    return (
+      <ErrorBoundary>
+        <div className="dashboard-container">
+          <div className="dashboard-header">
+            <h1 className="dashboard-title">Recipe Dashboard</h1>
+            <p className="dashboard-subtitle">
+              Create, manage, and share your delicious recipes with the world!
+            </p>
+          </div>
+          <FoodLoader />
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <div className="dashboard-container">
@@ -1220,9 +925,9 @@ const Dashboard = () => {
           <h1 className="dashboard-title">Recipe Dashboard</h1>
           <p className="dashboard-subtitle">
             Create, manage, and share your delicious recipes with the world!
-            {recipes.length > 0 && (
+            {recipeIds.length > 0 && (
               <span style={{ marginLeft: '1rem', color: '#e67e22', fontWeight: 'bold' }}>
-                ({displayedRecipes.length} recipes loaded)
+                ({displayedRecipeIds.length} recipes loaded)
               </span>
             )}
           </p>
@@ -1239,11 +944,11 @@ const Dashboard = () => {
               fontSize: '0.85rem',
               color: '#666'
             }}>
-              <strong>Debug:</strong> Cached: {recipes.length} | 
-              Displayed: {displayedRecipes.length} | 
-              Current Page: {currentPageRef.current} |
-              Pages Loaded: {Array.from(loadedPagesRef.current).join(', ')} | 
-              Loading: {loading.fetch ? 'Yes' : 'No'} | 
+              <strong>Debug:</strong> Cached: {recipeIds.length} | 
+              Displayed: {displayedRecipeIds.length} | 
+              Current Page: {currentPage} |
+              Pages Loaded: {Array.from(loadedPages).join(', ')} | 
+              Loading: {recipesLoading ? 'Yes' : 'No'} | 
               Has More: {hasMore ? 'Yes' : 'No'}
             </div>
           )}
@@ -1286,10 +991,8 @@ const Dashboard = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
-                    if (window.confirm(`Are you sure you want to delete "${selectedRecipe.title}"?`)) {
-                      handleDelete(selectedRecipe._id);
-                      setSelectedRecipe(null);
-                    }
+                    handleDeleteRecipe(selectedRecipe._id);
+                    setSelectedRecipe(null);
                   }}
                   style={{
                     padding: '0.75rem 1.5rem',
@@ -1447,85 +1150,99 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recipe Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '2rem'
-        }}>
-          {loading.fetch && recipes.length === 0 ? (
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
-              <FaSpinner className="animate-spin" size={40} color="#e67e22" />
-            </div>
-          ) : (
-            displayedRecipes.map((recipe) => (
-              <div key={recipe._id} style={{ position: 'relative' }}>
-                <RecipeCard
-                  recipe={recipe}
-                  onSelect={() => setSelectedRecipe(recipe)}
-                  onDelete={() => handleDelete(recipe._id)}
-                  onRate={(rating) => handleRateRecipe(recipe._id, rating)}
-                  isNew={newRecipeIdsRef.current.has(recipe._id)}
-                />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (window.confirm(`Are you sure you want to delete "${recipe.title}"?`)) {
-                      handleDelete(recipe._id);
-                    }
-                  }}
-                  style={{
-                    position: 'absolute',
-                    top: '10px',
-                    right: '10px',
-                    zIndex: 10,
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '36px',
-                    height: '36px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                    opacity: 0,
-                    transition: 'opacity 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-                >
-                  <FaTimes />
-                </button>
-              </div>
-            ))
-          )}
+        {/* PHASE 3: Virtualization Toggle */}
+        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={useVirtualization}
+              onChange={(e) => setUseVirtualization(e.target.checked)}
+            />
+            <span>Use Virtualization (Recommended for 50+ recipes)</span>
+          </label>
+          <span style={{ color: '#666', fontSize: '0.9rem' }}>
+            {useVirtualization ? '✅ Only rendering visible items' : '⚠️ Rendering all items'}
+          </span>
         </div>
 
-        {/* Infinite Scroll Loading Indicator */}
-        {loading.fetch && recipes.length > 0 && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            padding: '2rem',
-            marginTop: '2rem'
-          }}>
-            <FaSpinner className="animate-spin" size={30} color="#e67e22" />
-            <span style={{ marginLeft: '1rem', color: '#666' }}>Loading more recipes...</span>
-          </div>
-        )}
-        
-        {/* End of results indicator */}
-        {!hasMore && recipes.length > 0 && (
-          <div style={{
-            textAlign: 'center',
-            padding: '2rem',
-            color: '#666',
-            fontSize: '0.9rem'
-          }}>
-            You've reached the end of the recipes list
-          </div>
+        {/* Recipe Grid - Conditional: Virtualized or Regular */}
+        {useVirtualization ? (
+          <Profiler
+            id="VirtualizedRecipeGrid"
+            onRender={(id, phase, actualDuration, baseDuration, startTime, commitTime) => {
+              console.log(`[Profiler] ${id} - ${phase}`, {
+                actualDuration: `${actualDuration.toFixed(2)}ms`,
+                baseDuration: `${baseDuration.toFixed(2)}ms`,
+                improvement: baseDuration > 0 ? `${((1 - actualDuration / baseDuration) * 100).toFixed(1)}%` : 'N/A'
+              });
+            }}
+          >
+            <VirtualizedRecipeGrid
+              recipeIds={displayedRecipeIds}
+              recipesById={recipesById}
+              loading={recipesLoading}
+              onSelectRecipe={handleSelectRecipe}
+              onDeleteRecipe={handleDeleteRecipe}
+              onRateRecipe={handleRateRecipe}
+              newRecipeIds={newRecipeIds}
+              onLoadMore={loadMore}
+              hasMore={hasMore}
+            />
+          </Profiler>
+        ) : (
+          <>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '2rem'
+            }}>
+              <Profiler
+                id="RecipeGrid"
+                onRender={(id, phase, actualDuration, baseDuration, startTime, commitTime) => {
+                  console.log(`[Profiler] ${id} - ${phase}`, {
+                    actualDuration: `${actualDuration.toFixed(2)}ms`,
+                    baseDuration: `${baseDuration.toFixed(2)}ms`,
+                    improvement: baseDuration > 0 ? `${((1 - actualDuration / baseDuration) * 100).toFixed(1)}%` : 'N/A'
+                  });
+                }}
+              >
+                <RecipeGrid
+                  recipeIds={displayedRecipeIds}
+                  recipesById={recipesById}
+                  loading={recipesLoading}
+                  onSelectRecipe={handleSelectRecipe}
+                  onDeleteRecipe={handleDeleteRecipe}
+                  onRateRecipe={handleRateRecipe}
+                  newRecipeIds={newRecipeIds}
+                />
+              </Profiler>
+            </div>
+
+            {/* Infinite Scroll Loading Indicator */}
+            {recipesLoading && recipeIds.length > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '2rem',
+                marginTop: '2rem'
+              }}>
+                <FaSpinner className="animate-spin" size={30} color="#e67e22" />
+                <span style={{ marginLeft: '1rem', color: '#666' }}>Loading more recipes...</span>
+              </div>
+            )}
+            
+            {/* End of results indicator */}
+            {!hasMore && recipeIds.length > 0 && (
+              <div style={{
+                textAlign: 'center',
+                padding: '2rem',
+                color: '#666',
+                fontSize: '0.9rem'
+              }}>
+                You've reached the end of the recipes list
+              </div>
+            )}
+          </>
         )}
 
         {/* Recipe Modal */}
@@ -1533,8 +1250,19 @@ const Dashboard = () => {
           <RecipeModal
             recipe={selectedRecipe}
             onClose={() => setSelectedRecipe(null)}
-            onDelete={() => handleDelete(selectedRecipe._id)}
-            onUpdate={(updatedData) => handleUpdate(selectedRecipe._id, updatedData)}
+            onDelete={() => handleDeleteRecipe(selectedRecipe._id)}
+            onUpdate={(updatedData) => {
+              updateRecipeAPI(selectedRecipe._id, updatedData)
+                .then(updated => {
+                  updateRecipeInCache(selectedRecipe._id, updated);
+                  setSelectedRecipe(null);
+                  toast.success('Recipe updated successfully');
+                })
+                .catch(error => {
+                  toast.error('Failed to update recipe');
+                  console.error(error);
+                });
+            }}
             onRate={(rating) => handleRateRecipe(selectedRecipe._id, rating)}
             onShare={(recipe) => {
               console.log('Share button clicked for recipe:', recipe);
@@ -1873,37 +1601,15 @@ const Dashboard = () => {
             gap: '20px',
             padding: '20px 0'
           }}>
-            {loading.fetch && recipes.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', gridColumn: '1 / -1' }}>
-                <FaSpinner className="spinner" size={40} style={{ color: '#e67e22' }} />
-              </div>
-            ) : displayedRecipes.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px',
-                backgroundColor: '#fff',
-                borderRadius: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                gridColumn: '1 / -1'
-              }}>
-                <FaUtensils size={40} style={{ color: '#95a5a6', marginBottom: '20px' }} />
-                <h2 style={{ color: '#2c3e50', marginBottom: '10px' }}>No matching recipes found</h2>
-                <p style={{ color: '#7f8c8d' }}>
-                  Try adding more ingredients or adjusting your filters
-                </p>
-              </div>
-            ) : (
-              displayedRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe._id}
-                  recipe={recipe}
-                  onSelect={() => setSelectedRecipe(recipe)}
-                  onDelete={() => handleDelete(recipe._id)}
-                  onRate={(rating) => handleRateRecipe(recipe._id, rating)}
-                  isNew={newRecipeIdsRef.current.has(recipe._id)}
-                />
-              ))
-            )}
+            <RecipeGrid
+              recipeIds={displayedRecipeIds}
+              recipesById={recipesById}
+              loading={recipesLoading}
+              onSelectRecipe={handleSelectRecipe}
+              onDeleteRecipe={handleDeleteRecipe}
+              onRateRecipe={handleRateRecipe}
+              newRecipeIds={newRecipeIds}
+            />
           </div>
 
 
