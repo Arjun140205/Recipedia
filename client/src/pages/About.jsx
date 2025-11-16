@@ -3,6 +3,13 @@ import recipe2 from '../images/recipe2.jpg';
 import recipe3 from '../images/recipe3.jpg';
 
 const About = () => {
+  const scrollToContent = () => {
+    const contentSection = document.querySelector('.content-section');
+    if (contentSection) {
+      contentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -91,6 +98,71 @@ const About = () => {
           text-shadow: 1px 2px 8px rgba(0,0,0,0.4);
           max-width: 700px;
           margin: 0 auto;
+        }
+
+        /* Scroll Down Button */
+        .scroll-down-btn {
+          position: absolute;
+          bottom: 3rem;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 3;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+          animation: fadeInUp 1.5s ease-out 0.8s both;
+          transition: all 0.3s ease;
+        }
+
+        .scroll-down-btn:hover {
+          transform: translateX(-50%) translateY(5px);
+        }
+
+        .scroll-down-btn span {
+          font-family: 'Lato', sans-serif;
+          font-size: 0.85rem;
+          color: white;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          font-weight: 400;
+          text-shadow: 1px 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .scroll-arrow {
+          width: 30px;
+          height: 50px;
+          border: 2px solid rgba(255, 255, 255, 0.8);
+          border-radius: 20px;
+          position: relative;
+          display: flex;
+          justify-content: center;
+          padding-top: 8px;
+        }
+
+        .scroll-arrow::before {
+          content: '';
+          width: 6px;
+          height: 6px;
+          background: white;
+          border-radius: 50%;
+          animation: scrollDot 2s infinite;
+        }
+
+        @keyframes scrollDot {
+          0% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(20px);
+            opacity: 0.5;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
         }
 
         /* Content Section */
@@ -251,104 +323,131 @@ const About = () => {
 
         /* Mobile Styles */
         @media (max-width: 768px) {
+          .scroll-down-btn {
+            display: none;
+          }
+
           .hero-section {
-            height: 70vh;
-            min-height: 500px;
+            height: 65vh;
+            min-height: 480px;
+          }
+
+          .hero-content {
+            padding: 2rem 1.5rem;
           }
 
           .hero-content h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+            font-size: 2.2rem;
+            margin-bottom: 1.2rem;
+            line-height: 1.25;
           }
 
           .hero-content p {
             font-size: 1.05rem;
-            line-height: 1.6;
+            line-height: 1.65;
           }
 
           .content-section {
-            padding: 3rem 1.5rem;
+            padding: 3rem 1.5rem 4rem;
           }
 
           .gallery-text-blend {
             grid-template-columns: 1fr;
-            gap: 3rem;
-            margin-bottom: 3rem;
+            gap: 0;
+            margin-bottom: 0;
           }
 
+          /* Hide image gallery on mobile */
           .gallery-images {
-            order: 2;
+            display: none;
           }
 
           .text-content {
             order: 1;
-            padding: 0;
+            padding: 2rem 1rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
           }
 
           .text-content h2 {
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
+            font-size: 2.2rem;
+            margin-bottom: 1.8rem;
+            text-align: center;
+            color: #2c1810;
           }
 
           .text-content p {
-            font-size: 1rem;
-            line-height: 1.8;
-            margin-bottom: 1.5rem;
-          }
-
-          .gallery-img:nth-child(1) img {
-            height: 250px;
-          }
-
-          .gallery-img:nth-child(2) img,
-          .gallery-img:nth-child(3) img {
-            height: 200px;
+            font-size: 1.02rem;
+            line-height: 1.85;
+            margin-bottom: 1.6rem;
+            text-align: left;
+            color: #4a4a4a;
           }
         }
 
         @media (max-width: 480px) {
           .hero-section {
-            height: 60vh;
-            min-height: 450px;
+            height: 55vh;
+            min-height: 420px;
           }
 
           .hero-content {
-            padding: 1.5rem;
+            padding: 1.5rem 1.2rem;
           }
 
           .hero-content h1 {
-            font-size: 2rem;
+            font-size: 1.85rem;
             line-height: 1.3;
+            margin-bottom: 1rem;
           }
 
           .hero-content p {
-            font-size: 0.95rem;
+            font-size: 0.98rem;
+            line-height: 1.6;
           }
 
           .content-section {
-            padding: 2.5rem 1rem;
+            padding: 2.5rem 1rem 3rem;
+          }
+
+          .text-content {
+            padding: 1.8rem 1rem;
+            border-radius: 12px;
           }
 
           .text-content h2 {
-            font-size: 1.75rem;
+            font-size: 1.85rem;
+            margin-bottom: 1.5rem;
           }
 
           .text-content p {
-            font-size: 0.95rem;
+            font-size: 0.97rem;
+            line-height: 1.8;
+            margin-bottom: 1.4rem;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .hero-content h1 {
+            font-size: 1.65rem;
+          }
+
+          .hero-content p {
+            font-size: 0.92rem;
+          }
+
+          .text-content {
+            padding: 1.5rem 0.8rem;
+          }
+
+          .text-content h2 {
+            font-size: 1.65rem;
+          }
+
+          .text-content p {
+            font-size: 0.93rem;
             line-height: 1.75;
-          }
-
-          .gallery-images {
-            gap: 0.8rem;
-          }
-
-          .gallery-img:nth-child(1) img {
-            height: 200px;
-          }
-
-          .gallery-img:nth-child(2) img,
-          .gallery-img:nth-child(3) img {
-            height: 160px;
           }
         }
       `}</style>
@@ -365,6 +464,12 @@ const About = () => {
             <p>
               Discover inspiration, break the routine, and bring joy to your family's table with every delicious discovery.
             </p>
+          </div>
+          
+          {/* Scroll Down Button - Desktop Only */}
+          <div className="scroll-down-btn" onClick={scrollToContent}>
+            <span>Scroll</span>
+            <div className="scroll-arrow"></div>
           </div>
         </section>
 
