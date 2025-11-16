@@ -41,9 +41,16 @@ const normalizeRecipe = (recipe) => {
   return normalized;
 };
 
-export const getRecipes = async () => {
-  const response = await axios.get(RECIPES_URL, { headers: getAuthHeader() });
-  return response.data.recipes.map(normalizeRecipe);
+export const getRecipes = async (page = 1, limit = 12) => {
+  const response = await axios.get(`${RECIPES_URL}?page=${page}&limit=${limit}`, { 
+    headers: getAuthHeader() 
+  });
+  return {
+    recipes: response.data.recipes.map(normalizeRecipe),
+    currentPage: response.data.currentPage,
+    totalPages: response.data.totalPages,
+    totalRecipes: response.data.totalRecipes
+  };
 };
 
 export const createRecipe = async (recipeData) => {
