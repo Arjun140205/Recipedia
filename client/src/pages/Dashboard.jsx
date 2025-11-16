@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import React from 'react';
 import DOMPurify from 'dompurify';
 import { createRecipe, getRecipes, deleteRecipe, updateRecipe } from '../services/recipeService';
@@ -139,7 +139,8 @@ const StarRating = ({ rating, onRate, size = '1.2rem', interactive = false }) =>
   );
 };
 
-const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
+// Memoized RecipeCard to prevent unnecessary re-renders
+const RecipeCard = React.memo(({ recipe, onSelect, onDelete, onRate, isNew }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -154,19 +155,33 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
     setImageError(true);
   };
 
+  // Only animate if it's a new recipe
+  const CardWrapper = isNew ? motion.div : 'div';
+  const animationProps = isNew ? {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3 }
+  } : {};
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      whileHover={{ y: -5 }}
+    <CardWrapper
+      {...animationProps}
       style={{
         backgroundColor: 'white',
         borderRadius: '12px',
         overflow: 'hidden',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         cursor: 'pointer',
-        position: 'relative' // Added for delete button positioning
+        position: 'relative',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-5px)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
       }}
       onClick={onSelect}
       role="button"
@@ -262,9 +277,19 @@ const RecipeCard = ({ recipe, onSelect, onDelete, onRate }) => {
           size="1.2rem"
         />
       </div>
-    </motion.div>
+    </CardWrapper>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  // Only re-render if these specific props change
+  return (
+    prevProps.recipe._id === nextProps.recipe._id &&
+    prevProps.recipe.title === nextProps.recipe.title &&
+    prevProps.recipe.popularity === nextProps.recipe.popularity &&
+    prevProps.recipe.image === nextProps.recipe.image &&
+    prevProps.isNew === nextProps.isNew
+  );
+});
 
 // SharePreview component commented out as it's not being used
 /* const SharePreview = ({ recipe }) => {
@@ -727,11 +752,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Utility function to generate unique keys for recipes
-const generateUniqueKey = (recipe, index, prefix = 'recipe') => {
-  const id = recipe._id || recipe.id || `temp-${Date.now()}-${Math.random()}`;
-  return `${prefix}-${id}-${index}`;
-};
+// Removed generateUniqueKey - now using stable recipe._id as keys directly
 
 const Dashboard = () => {
   const [recipes, setRecipes] = useState([]);
@@ -746,14 +767,6 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortOption, setSortOption] = useState('recent');
-  // const [userIngredients, setUserIngredients] = useState([]); // Commented out as unused
-  // const [filters, setFilters] = useState({ // Commented out as unused
-  //   vegetarian: false,
-  //   vegan: false,
-  //   glutenFree: false,
-  //   maxPrepTime: null,
-  //   difficulty: null
-  // });
   const [showForm, setShowForm] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -775,15 +788,29 @@ const Dashboard = () => {
     isPublic: true
   });
 
+  // Infinite scroll state
+  const [hasMore, setHasMore] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const currentPageRef = useRef(1); // Track current page without causing re-renders
+  const loadedPagesRef = useRef(new Set([1])); // Use ref to avoid re-renders
+  const isLoadingRef = useRef(false); // Track loading state without causing re-renders
+  const newRecipeIdsRef = useRef(new Set()); // Track newly added recipe IDs for animation
+  const ITEMS_PER_PAGE = 12;
+
   // Fetch recipes on component mount
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
+      if (isLoadingRef.current) return;
+      
       try {
+        isLoadingRef.current = true;
         setLoading(prev => ({ ...prev, fetch: true }));
 
-        // Fetch recipes
-        const recipesData = await getRecipes();
-        setRecipes(recipesData);
+        // Fetch first page of recipes
+        const recipesData = await getRecipes(1, ITEMS_PER_PAGE);
+        setRecipes(recipesData.recipes);
+        setHasMore(recipesData.currentPage < recipesData.totalPages);
+        loadedPagesRef.current = new Set([1]);
 
         // Fetch current user profile
         const token = localStorage.getItem('token');
@@ -807,11 +834,101 @@ const Dashboard = () => {
         console.error('Error fetching recipes:', error);
       } finally {
         setLoading(prev => ({ ...prev, fetch: false }));
+        isLoadingRef.current = false;
       }
     };
 
-    fetchData();
+    fetchInitialData();
   }, []);
+
+  // Infinite scroll: Load more recipes when scrolling near bottom
+  const loadMoreRecipes = useCallback(async (pageToLoad) => {
+    // Check if already loading or page already loaded
+    if (isLoadingRef.current || loadedPagesRef.current.has(pageToLoad)) {
+      console.log('Skipping load - already loading or page loaded:', pageToLoad);
+      return;
+    }
+
+    console.log('Loading page:', pageToLoad);
+    
+    try {
+      isLoadingRef.current = true;
+      setLoading(prev => ({ ...prev, fetch: true }));
+      
+      const recipesData = await getRecipes(pageToLoad, ITEMS_PER_PAGE);
+      
+      // Append new recipes to existing ones (caching)
+      setRecipes(prev => {
+        // Filter out any duplicates by ID
+        const existingIds = new Set(prev.map(r => r._id));
+        const newRecipes = recipesData.recipes.filter(r => !existingIds.has(r._id));
+        
+        // Mark new recipes for animation
+        newRecipes.forEach(r => newRecipeIdsRef.current.add(r._id));
+        
+        // Clear animation flags after 500ms
+        setTimeout(() => {
+          newRecipes.forEach(r => newRecipeIdsRef.current.delete(r._id));
+        }, 500);
+        
+        return [...prev, ...newRecipes];
+      });
+      
+      setHasMore(recipesData.currentPage < recipesData.totalPages);
+      loadedPagesRef.current.add(pageToLoad);
+      
+      console.log('Loaded page:', pageToLoad, 'New recipes:', recipesData.recipes.length);
+      
+    } catch (error) {
+      console.error('Error loading more recipes:', error);
+      toast.error('Failed to load more recipes');
+    } finally {
+      setLoading(prev => ({ ...prev, fetch: false }));
+      isLoadingRef.current = false;
+    }
+  }, []);
+
+  // Scroll event handler with throttling
+  useEffect(() => {
+    let scrollTimeout;
+    
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = document.documentElement.clientHeight;
+
+      // Show scroll to top button when scrolled down
+      setShowScrollTop(scrollTop > 300);
+
+      // Throttle scroll events
+      if (scrollTimeout) return;
+      
+      scrollTimeout = setTimeout(() => {
+        scrollTimeout = null;
+        
+        // Load more when user scrolls to 80% of the page
+        if (!isLoadingRef.current && hasMore && scrollTop + clientHeight >= scrollHeight * 0.8) {
+          const nextPage = currentPageRef.current + 1;
+          // Only trigger load if this page hasn't been loaded yet
+          if (!loadedPagesRef.current.has(nextPage)) {
+            currentPageRef.current = nextPage;
+            loadMoreRecipes(nextPage);
+          }
+        }
+      }, 200); // Throttle to 200ms
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, [hasMore, loadMoreRecipes]);
+
+  // Scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Accessibility: Focus management
   useEffect(() => {
@@ -825,29 +942,7 @@ const Dashboard = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showModal, selectedRecipe]);
 
-  // Performance optimization: Memoize filtered and sorted recipes
-  const filteredAndSortedRecipes = useMemo(() => {
-    return recipes
-      .filter(recipe => {
-        const matchesSearch = recipe.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = selectedCategory === 'all' || recipe.category === selectedCategory;
-        return matchesSearch && matchesCategory;
-      })
-      .sort((a, b) => {
-        switch (sortOption) {
-          case 'popular':
-            return b.popularity - a.popularity;
-          case 'recent':
-            return new Date(b.createdAt) - new Date(a.createdAt);
-          case 'quick':
-            return parseInt(a.prepTime) - parseInt(b.prepTime);
-          case 'alpha':
-            return a.title.localeCompare(b.title);
-          default:
-            return 0;
-        }
-      });
-  }, [recipes, searchQuery, selectedCategory, sortOption]);
+
 
   // Performance optimization: Debounced search
   const debouncedSearch = useCallback((value) => {
@@ -887,7 +982,17 @@ const Dashboard = () => {
           userId: localStorage.getItem('userId')
         });
 
+        // Mark as new for animation
+        newRecipeIdsRef.current.add(newRecipe._id);
+        
+        // Prepend new recipe to the cached list
         setRecipes(prev => [newRecipe, ...prev]);
+        
+        // Clear animation flag after 500ms
+        setTimeout(() => {
+          newRecipeIdsRef.current.delete(newRecipe._id);
+        }, 500);
+        
         toast.success('Recipe created successfully');
       }
 
@@ -928,6 +1033,8 @@ const Dashboard = () => {
       try {
         setLoading(prev => ({ ...prev, delete: true }));
         await deleteRecipe(recipeId);
+        
+        // Remove from cached recipes
         setRecipes(prev => prev.filter(recipe => recipe._id !== recipeId));
         toast.success('Recipe deleted successfully');
       } catch (error) {
@@ -1024,14 +1131,34 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Add pagination
-  const [page, setPage] = useState(1);
-  const ITEMS_PER_PAGE = 12;
+  // Filter and sort all cached recipes (memoized for performance)
+  const displayedRecipes = useMemo(() => {
+    console.log('Recalculating displayed recipes. Total cached:', recipes.length);
+    
+    const filtered = recipes.filter(recipe => {
+      const matchesSearch = !searchQuery || recipe.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || recipe.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
 
-  const paginatedRecipes = useMemo(() => {
-    const startIndex = (page - 1) * ITEMS_PER_PAGE;
-    return filteredAndSortedRecipes.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredAndSortedRecipes, page]);
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case 'popular':
+          return (b.popularity || 0) - (a.popularity || 0);
+        case 'recent':
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        case 'quick':
+          return parseInt(a.prepTime || 0) - parseInt(b.prepTime || 0);
+        case 'alpha':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+
+    console.log('Displayed recipes after filter/sort:', sorted.length);
+    return sorted;
+  }, [recipes, searchQuery, selectedCategory, sortOption]);
 
   // handleIngredientsUpdate and handleFilterChange functions commented out as they're not being used
   /* const handleIngredientsUpdate = async (ingredients) => {
@@ -1093,10 +1220,34 @@ const Dashboard = () => {
           <h1 className="dashboard-title">Recipe Dashboard</h1>
           <p className="dashboard-subtitle">
             Create, manage, and share your delicious recipes with the world!
+            {recipes.length > 0 && (
+              <span style={{ marginLeft: '1rem', color: '#e67e22', fontWeight: 'bold' }}>
+                ({displayedRecipes.length} recipes loaded)
+              </span>
+            )}
           </p>
         </div>
 
         <div className="dashboard-content">
+          {/* Debug Info Panel - Remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <div style={{
+              backgroundColor: '#f0f0f0',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              marginBottom: '1rem',
+              fontSize: '0.85rem',
+              color: '#666'
+            }}>
+              <strong>Debug:</strong> Cached: {recipes.length} | 
+              Displayed: {displayedRecipes.length} | 
+              Current Page: {currentPageRef.current} |
+              Pages Loaded: {Array.from(loadedPagesRef.current).join(', ')} | 
+              Loading: {loading.fetch ? 'Yes' : 'No'} | 
+              Has More: {hasMore ? 'Yes' : 'No'}
+            </div>
+          )}
+
           {/* Search and Actions Section */}
           <div className="search-and-actions">
             <div className="search-container">
@@ -1302,99 +1453,78 @@ const Dashboard = () => {
           gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
           gap: '2rem'
         }}>
-          {loading.fetch ? (
+          {loading.fetch && recipes.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
               <FaSpinner className="animate-spin" size={40} color="#e67e22" />
             </div>
           ) : (
-            <AnimatePresence mode="wait">
-              {paginatedRecipes.map((recipe, index) => (
-                <motion.div
-                  key={generateUniqueKey(recipe, index, 'main')}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  style={{ position: 'relative' }}
+            displayedRecipes.map((recipe) => (
+              <div key={recipe._id} style={{ position: 'relative' }}>
+                <RecipeCard
+                  recipe={recipe}
+                  onSelect={() => setSelectedRecipe(recipe)}
+                  onDelete={() => handleDelete(recipe._id)}
+                  onRate={(rating) => handleRateRecipe(recipe._id, rating)}
+                  isNew={newRecipeIdsRef.current.has(recipe._id)}
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Are you sure you want to delete "${recipe.title}"?`)) {
+                      handleDelete(recipe._id);
+                    }
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    zIndex: 10,
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    opacity: 0,
+                    transition: 'opacity 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
                 >
-                  <RecipeCard
-                    recipe={recipe}
-                    onSelect={() => setSelectedRecipe(recipe)}
-                    onDelete={() => handleDelete(recipe._id)}
-                    onRate={(rating) => handleRateRecipe(recipe._id, rating)}
-                  />
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Are you sure you want to delete "${recipe.title}"?`)) {
-                        handleDelete(recipe._id);
-                      }
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '10px',
-                      right: '10px',
-                      zIndex: 10,
-                      backgroundColor: '#dc3545',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '36px',
-                      height: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                  >
-                    <FaTimes />
-                  </motion.button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                  <FaTimes />
+                </button>
+              </div>
+            ))
           )}
         </div>
 
-        {/* Pagination Controls */}
-        {filteredAndSortedRecipes.length > ITEMS_PER_PAGE && (
+        {/* Infinite Scroll Loading Indicator */}
+        {loading.fetch && recipes.length > 0 && (
           <div style={{
             display: 'flex',
             justifyContent: 'center',
-            gap: '1rem',
-            marginTop: '2rem',
-            alignItems: 'center'
+            padding: '2rem',
+            marginTop: '2rem'
           }}>
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              style={{
-                padding: '0.5rem 1rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                cursor: page === 1 ? 'not-allowed' : 'pointer',
-                opacity: page === 1 ? 0.5 : 1
-              }}
-              aria-label="Previous page"
-            >
-              Previous
-            </button>
-            <span>Page {page} of {Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE)}</span>
-            <button
-              onClick={() => setPage(p => Math.min(Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE), p + 1))}
-              disabled={page >= Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE)}
-              style={{
-                padding: '0.5rem 1rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                cursor: page >= Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer',
-                opacity: page >= Math.ceil(filteredAndSortedRecipes.length / ITEMS_PER_PAGE) ? 0.5 : 1
-              }}
-              aria-label="Next page"
-            >
-              Next
-            </button>
+            <FaSpinner className="animate-spin" size={30} color="#e67e22" />
+            <span style={{ marginLeft: '1rem', color: '#666' }}>Loading more recipes...</span>
+          </div>
+        )}
+        
+        {/* End of results indicator */}
+        {!hasMore && recipes.length > 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            color: '#666',
+            fontSize: '0.9rem'
+          }}>
+            You've reached the end of the recipes list
           </div>
         )}
 
@@ -1743,11 +1873,11 @@ const Dashboard = () => {
             gap: '20px',
             padding: '20px 0'
           }}>
-            {loading.fetch ? (
+            {loading.fetch && recipes.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', gridColumn: '1 / -1' }}>
                 <FaSpinner className="spinner" size={40} style={{ color: '#e67e22' }} />
               </div>
-            ) : recipes.length === 0 ? (
+            ) : displayedRecipes.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '40px',
@@ -1763,58 +1893,20 @@ const Dashboard = () => {
                 </p>
               </div>
             ) : (
-              paginatedRecipes.map((recipe, index) => (
+              displayedRecipes.map((recipe) => (
                 <RecipeCard
-                  key={generateUniqueKey(recipe, index, 'match')}
+                  key={recipe._id}
                   recipe={recipe}
                   onSelect={() => setSelectedRecipe(recipe)}
                   onDelete={() => handleDelete(recipe._id)}
                   onRate={(rating) => handleRateRecipe(recipe._id, rating)}
+                  isNew={newRecipeIdsRef.current.has(recipe._id)}
                 />
               ))
             )}
           </div>
 
-          {/* Pagination Controls for recipe matches */}
-          {recipes.length > ITEMS_PER_PAGE && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '1rem',
-              marginTop: '2rem',
-              alignItems: 'center'
-            }}>
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                style={{
-                  padding: '0.5rem 1rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  cursor: page === 1 ? 'not-allowed' : 'pointer',
-                  opacity: page === 1 ? 0.5 : 1
-                }}
-                aria-label="Previous page"
-              >
-                Previous
-              </button>
-              <span>Page {page} of {Math.ceil(recipes.length / ITEMS_PER_PAGE)}</span>
-              <button
-                onClick={() => setPage(p => Math.min(Math.ceil(recipes.length / ITEMS_PER_PAGE), p + 1))}
-                disabled={page >= Math.ceil(recipes.length / ITEMS_PER_PAGE)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  cursor: page >= Math.ceil(recipes.length / ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer',
-                  opacity: page >= Math.ceil(recipes.length / ITEMS_PER_PAGE) ? 0.5 : 1
-                }}
-                aria-label="Next page"
-              >
-                Next
-              </button>
-            </div>
-          )}
+
           {/* Enhanced Share Modal */}
           <AnimatePresence>
             {showEnhancedShare && shareRecipe && (
@@ -1844,6 +1936,39 @@ const Dashboard = () => {
               />
             )}
           </AnimatePresence>
+
+          {/* Scroll to Top Button */}
+          {showScrollTop && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={scrollToTop}
+              style={{
+                position: 'fixed',
+                bottom: '2rem',
+                right: '2rem',
+                backgroundColor: '#e67e22',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '50px',
+                height: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                zIndex: 999,
+                fontSize: '1.5rem'
+              }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              aria-label="Scroll to top"
+            >
+              ↑
+            </motion.button>
+          )}
         </div>
       </div>
     </ErrorBoundary>
