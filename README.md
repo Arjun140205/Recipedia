@@ -43,7 +43,7 @@
 <td width="50%">
 
 ### 🏠 **Home Page**
-<img src="./client/public/Screenshot 2025-11-17 at 1.36.30 AM.png" alt="Home Page" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"/>
+<img src="./client/public/homepage.jpg" alt="Home Page" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"/>
 
 > *Discover thousands of recipes with our beautiful, intuitive interface*
 
@@ -51,7 +51,7 @@
 <td width="50%">
 
 ### 📖 **Recipe Dashboard**
-<img src="./client/public/Screenshot 2025-11-17 at 1.38.42 AM.png" alt="Dashboard" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"/>
+<img src="./client/public/homepage2.jpg" alt="Dashboard" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"/>
 
 > *Manage your culinary creations with powerful tools*
 

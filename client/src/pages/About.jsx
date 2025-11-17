@@ -25,12 +25,13 @@ const About = () => {
           background: linear-gradient(to bottom, #fdfbf7 0%, #ffffff 100%);
           min-height: 100vh;
           overflow-x: hidden;
+          margin-top: -85px;
         }
 
         /* Hero Section with Image */
         .hero-section {
           position: relative;
-          height: 85vh;
+          height: 100vh;
           min-height: 600px;
           display: flex;
           align-items: center;
@@ -327,8 +328,12 @@ const About = () => {
             display: none;
           }
 
+          .about-landing {
+            margin-top: -80px;
+          }
+
           .hero-section {
-            height: 65vh;
+            height: 100vh;
             min-height: 480px;
           }
 
@@ -388,7 +393,7 @@ const About = () => {
 
         @media (max-width: 480px) {
           .hero-section {
-            height: 55vh;
+            height: 100vh;
             min-height: 420px;
           }
 
