@@ -36,7 +36,7 @@
 <!-- Screenshots Section with styling -->
 <div align="center">
 
-## 🎬 **Experience the Magic**
+##  **Experience the Magic**
 
 <table>
 <tr>
@@ -103,7 +103,7 @@ cd client && npm start
 
 <div align="center">
 
-### 🎊 **That's it! You're ready to cook!** 🎊
+###  **That's it! You're ready to cook!** 🎊
 
 </div>
 
