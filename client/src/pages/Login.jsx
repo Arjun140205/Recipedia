@@ -81,6 +81,12 @@ const Login = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Lato:wght@300;400;500;600;700&display=swap');
 
+        .login-page-wrapper *,
+        .login-page-wrapper *::before,
+        .login-page-wrapper *::after {
+          box-sizing: border-box;
+        }
+
         .login-page-wrapper {
           min-height: 100vh;
           background: linear-gradient(135deg, #fdfbf7 0%, #fff8f0 50%, #fdfbf7 100%);
@@ -89,7 +95,9 @@ const Login = () => {
           justify-content: center;
           padding: 2rem;
           position: relative;
-          overflow: hidden;
+          overflow-x: hidden;
+          overflow-y: auto;
+          width: 100%;
         }
 
         .login-page-wrapper::before {
@@ -127,14 +135,62 @@ const Login = () => {
           z-index: 1;
         }
 
+        .login-form-card {
+          max-width: 480px;
+          width: 100%;
+          margin: 0 auto;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-radius: 20px;
+          padding: 2.5rem;
+          box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(230, 126, 34, 0.06);
+          border: 1px solid rgba(230, 126, 34, 0.1);
+          position: relative;
+          overflow: hidden;
+        }
+
         @media (max-width: 1024px) {
           .login-grid {
             grid-template-columns: 1fr;
             gap: 2rem;
-            max-width: 480px;
+            max-width: 100%;
           }
           .login-page-wrapper {
             padding: 1rem;
+          }
+          .login-form-card {
+            max-width: 100%;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .login-page-wrapper {
+            padding: 0.75rem;
+            align-items: flex-start;
+            padding-top: 1.5rem;
+          }
+          .login-form-card {
+            border-radius: 16px;
+            padding: 1.75rem 1.25rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .login-page-wrapper {
+            padding: 0.5rem;
+            padding-top: 1rem;
+          }
+          .login-form-card {
+            border-radius: 14px;
+            padding: 1.5rem 1rem;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .login-form-card {
+            padding: 1.25rem 0.875rem;
+            border-radius: 12px;
           }
         }
 
@@ -153,6 +209,7 @@ const Login = () => {
           appearance: none;
           color: #2D3748;
           box-sizing: border-box;
+          max-width: 100%;
         }
 
         .login-input-field::placeholder {
@@ -170,6 +227,13 @@ const Login = () => {
           .login-input-field {
             padding: 0.875rem 0.875rem 0.875rem 2.75rem;
             font-size: 16px;
+            border-radius: 10px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .login-input-field {
+            padding: 0.8rem 0.75rem 0.8rem 2.5rem;
           }
         }
 
@@ -198,6 +262,7 @@ const Login = () => {
           box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3);
           position: relative;
           overflow: hidden;
+          box-sizing: border-box;
         }
 
         .login-submit-btn:hover:not(:disabled) {
@@ -219,6 +284,7 @@ const Login = () => {
           .login-submit-btn {
             padding: 0.875rem;
             font-size: 1rem;
+            border-radius: 10px;
           }
         }
 
@@ -258,6 +324,42 @@ const Login = () => {
           color: #d35400;
           background: rgba(230, 126, 34, 0.06);
           transform: translateY(-1px);
+        }
+
+        .login-header-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 2.25rem;
+          font-weight: 600;
+          color: #2c1810;
+          margin: 0;
+          line-height: 1.1;
+        }
+
+        .login-header-subtitle {
+          font-family: 'Lato', sans-serif;
+          color: #888;
+          font-size: 1rem;
+          margin: 0;
+          line-height: 1.5;
+          font-weight: 400;
+        }
+
+        @media (max-width: 480px) {
+          .login-header-title {
+            font-size: 1.75rem;
+          }
+          .login-header-subtitle {
+            font-size: 0.9rem;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .login-header-title {
+            font-size: 1.5rem;
+          }
+          .login-header-subtitle {
+            font-size: 0.85rem;
+          }
         }
 
         @keyframes spin {
@@ -382,23 +484,10 @@ const Login = () => {
 
           {/* Right Side - Login Form */}
           <motion.div
+            className="login-form-card"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            style={{
-              maxWidth: '480px',
-              width: '100%',
-              margin: '0 auto',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              borderRadius: isMobile ? '16px' : '20px',
-              padding: isMobile ? '2rem 1.5rem' : '2.5rem',
-              boxShadow: '0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(230, 126, 34, 0.06)',
-              border: '1px solid rgba(230, 126, 34, 0.1)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
           >
             {/* Decorative accent */}
             <div style={{
@@ -489,27 +578,13 @@ const Login = () => {
                   animate={{ rotate: [0, -10, 10, 0] }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <FiCoffee size={28} color="#e67e22" />
+                  <FiCoffee size={isMobile ? 24 : 28} color="#e67e22" />
                 </motion.div>
-                <h1 style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: isMobile ? '2rem' : '2.25rem',
-                  fontWeight: '600',
-                  color: '#2c1810',
-                  margin: 0,
-                  lineHeight: 1.1
-                }}>
+                <h1 className="login-header-title">
                   Welcome Back
                 </h1>
               </div>
-              <p style={{
-                fontFamily: "'Lato', sans-serif",
-                color: '#888',
-                fontSize: isMobile ? '0.95rem' : '1rem',
-                margin: 0,
-                lineHeight: '1.5',
-                fontWeight: '400'
-              }}>
+              <p className="login-header-subtitle">
                 Sign in to continue your culinary journey
               </p>
             </motion.div>
