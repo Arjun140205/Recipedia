@@ -14,7 +14,17 @@
     
     <!-- LCP Optimization: Inline critical CSS for faster initial render -->
     <style>
+      /* Global box-sizing reset */
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+
       /* Critical CSS for initial render */
+      html {
+        overflow-x: hidden;
+        width: 100%;
+      }
+
       body {
         margin: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -22,10 +32,15 @@
           sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100vw;
       }
       
       #root {
         min-height: 100vh;
+        overflow-x: hidden;
+        max-width: 100vw;
       }
       
       /* Prevent layout shift during load */
