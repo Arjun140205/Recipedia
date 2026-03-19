@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  FiUser, 
-  FiLock, 
-  FiUserPlus, 
-  FiCoffee, 
-  FiHeart, 
+import {
+  FiUser,
+  FiLock,
+  FiUserPlus,
+  FiCoffee,
+  FiHeart,
   FiStar,
   FiUsers,
   FiBook,
@@ -27,7 +27,7 @@ const Signup = () => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -84,488 +84,610 @@ const Signup = () => {
   ];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, rgba(230, 126, 34, 0.1) 0%, rgba(50, 205, 50, 0.05) 50%, rgba(255, 255, 255, 0.1) 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: isMobile ? '1rem' : '2rem'
-    }}>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-        gap: isMobile ? '2rem' : '3rem',
-        maxWidth: '1200px',
-        width: '100%',
-        alignItems: 'center'
-      }}>
-        {/* Left Side - Features */}
-        {!isMobile && (
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            style={{ padding: '2rem' }}
-          >
-            <div style={{
-              textAlign: 'center',
-              marginBottom: '3rem'
-            }}>
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '80px',
-                  height: '80px',
-                  background: 'linear-gradient(135deg, #e67e22 0%, #f39c12 100%)',
-                  borderRadius: '50%',
-                  marginBottom: '1rem',
-                  boxShadow: '0 8px 32px rgba(230, 126, 34, 0.3)'
-                }}
-              >
-                <FiCoffee size={36} color="white" />
-              </motion.div>
-              <h2 style={{
-                fontSize: '2.5rem',
-                fontWeight: '700',
-                background: 'linear-gradient(135deg, #e67e22 0%, #32cd32 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                margin: '0 0 1rem 0'
-              }}>
-                Join Our Creator Community
-              </h2>
-              <p style={{
-                fontSize: '1.2rem',
-                color: '#666',
-                lineHeight: '1.6',
-                margin: 0
-              }}>
-                Share your culinary passion with food lovers around the world
-              </p>
-            </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Lato:wght@300;400;500;600;700&display=swap');
 
-            <div style={{
-              display: 'grid',
-              gap: '1.5rem'
-            }}>
-              {features.map((feature, index) => (
+        .signup-page-wrapper {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #fdfbf7 0%, #fff8f0 50%, #fdfbf7 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .signup-page-wrapper::before {
+          content: '';
+          position: absolute;
+          top: -200px;
+          right: -200px;
+          width: 500px;
+          height: 500px;
+          background: radial-gradient(circle, rgba(50, 205, 50, 0.05) 0%, transparent 70%);
+          border-radius: 50%;
+          pointer-events: none;
+        }
+
+        .signup-page-wrapper::after {
+          content: '';
+          position: absolute;
+          bottom: -150px;
+          left: -150px;
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, rgba(230, 126, 34, 0.05) 0%, transparent 70%);
+          border-radius: 50%;
+          pointer-events: none;
+        }
+
+        .signup-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 3rem;
+          max-width: 1100px;
+          width: 100%;
+          align-items: center;
+          position: relative;
+          z-index: 1;
+        }
+
+        @media (max-width: 1024px) {
+          .signup-grid {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 480px;
+          }
+          .signup-page-wrapper {
+            padding: 1rem;
+          }
+        }
+
+        .signup-input-field {
+          width: 100%;
+          padding: 1rem 1rem 1rem 3rem;
+          border-radius: 12px;
+          border: 2px solid rgba(50, 205, 50, 0.15);
+          font-size: 1rem;
+          font-family: 'Lato', sans-serif;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          background: rgba(255, 255, 255, 0.9);
+          outline: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+          color: #2D3748;
+          box-sizing: border-box;
+        }
+
+        .signup-input-field::placeholder {
+          color: #a0aec0;
+          font-weight: 400;
+        }
+
+        .signup-input-field:focus {
+          border-color: #32cd32;
+          box-shadow: 0 0 0 4px rgba(50, 205, 50, 0.08);
+          background: #fff;
+        }
+
+        @media (max-width: 768px) {
+          .signup-input-field {
+            padding: 0.875rem 0.875rem 0.875rem 2.75rem;
+            font-size: 16px;
+          }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+          .signup-input-field {
+            font-size: 16px;
+          }
+        }
+
+        .signup-submit-btn {
+          width: 100%;
+          padding: 1rem;
+          background: linear-gradient(135deg, #32cd32 0%, #5ed85e 100%);
+          color: white;
+          border: none;
+          border-radius: 12px;
+          font-size: 1.1rem;
+          font-weight: 600;
+          font-family: 'Lato', sans-serif;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          box-shadow: 0 4px 15px rgba(50, 205, 50, 0.3);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .signup-submit-btn:hover:not(:disabled) {
+          box-shadow: 0 6px 20px rgba(50, 205, 50, 0.4);
+          transform: translateY(-1px);
+        }
+
+        .signup-submit-btn:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .signup-submit-btn:disabled {
+          background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+
+        @media (max-width: 768px) {
+          .signup-submit-btn {
+            padding: 0.875rem;
+            font-size: 1rem;
+          }
+        }
+
+        .signup-highlight-card {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1.25rem 1.5rem;
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 14px;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+          border: 1px solid rgba(50, 205, 50, 0.08);
+          transition: all 0.3s ease;
+        }
+
+        .signup-highlight-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 25px rgba(50, 205, 50, 0.1);
+          border-color: rgba(50, 205, 50, 0.15);
+        }
+
+        .signup-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #32cd32;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 1rem;
+          font-family: 'Lato', sans-serif;
+          transition: all 0.3s ease;
+          padding: 0.5rem 1rem;
+          border-radius: 8px;
+        }
+
+        .signup-link:hover {
+          color: #228b22;
+          background: rgba(50, 205, 50, 0.06);
+          transform: translateY(-1px);
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
+
+      <div className="signup-page-wrapper">
+        <div className="signup-grid">
+
+          {/* Left Side — Features Panel (Desktop) */}
+          {!isMobile && (
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              style={{ padding: '1rem' }}
+            >
+              <div style={{
+                textAlign: 'center',
+                marginBottom: '2.5rem'
+              }}>
                 <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 + index * 0.1, duration: 0.6 }}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    padding: '1.5rem',
-                    background: 'rgba(255, 255, 255, 0.7)',
-                    borderRadius: '16px',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
-                    border: '1px solid rgba(230, 126, 34, 0.1)'
-                  }}
-                >
-                  <div style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '50px',
-                    height: '50px',
-                    background: 'linear-gradient(135deg, #e67e22 0%, #f39c12 100%)',
-                    borderRadius: '12px',
-                    color: 'white'
-                  }}>
-                    <feature.icon size={24} />
-                  </div>
-                  <div>
-                    <h3 style={{
-                      fontSize: '1.1rem',
-                      fontWeight: '600',
-                      color: '#333',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      {feature.title}
-                    </h3>
-                    <p style={{
-                      fontSize: '0.9rem',
-                      color: '#666',
-                      margin: 0,
-                      lineHeight: '1.4'
-                    }}>
-                      {feature.description}
-                    </p>
-                  </div>
+                    width: '80px',
+                    height: '80px',
+                    background: 'linear-gradient(135deg, #32cd32 0%, #5ed85e 100%)',
+                    borderRadius: '50%',
+                    marginBottom: '1.5rem',
+                    boxShadow: '0 8px 32px rgba(50, 205, 50, 0.25)',
+                    animation: 'float 3s ease-in-out infinite'
+                  }}
+                >
+                  <FiHeart size={36} color="white" />
                 </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
+                <h2 style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: '2.8rem',
+                  fontWeight: '600',
+                  color: '#2c1810',
+                  margin: '0 0 0.75rem 0',
+                  lineHeight: '1.2'
+                }}>
+                  Join Our Creator<br />Community
+                </h2>
+                <p style={{
+                  fontFamily: "'Lato', sans-serif",
+                  fontSize: '1.15rem',
+                  color: '#666',
+                  lineHeight: '1.7',
+                  margin: 0,
+                  fontWeight: '300'
+                }}>
+                  Share your culinary passion with food lovers around the world
+                </p>
+              </div>
 
-        {/* Right Side - Signup Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          style={{
-            maxWidth: '450px',
-            width: '100%',
-            margin: '0 auto',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            borderRadius: isMobile ? '16px' : '20px',
-            padding: isMobile ? '2rem 1.5rem' : '3rem',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Decorative background elements */}
-          <div style={{
-            position: 'absolute',
-            top: '-50px',
-            right: '-50px',
-            width: '100px',
-            height: '100px',
-            background: 'linear-gradient(45deg, #32cd32, #5ed85e)',
-            borderRadius: '50%',
-            opacity: 0.1,
-            filter: 'blur(40px)'
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: '-30px',
-            left: '-30px',
-            width: '80px',
-            height: '80px',
-            background: 'linear-gradient(45deg, #e67e22, #f39c12)',
-            borderRadius: '50%',
-            opacity: 0.1,
-            filter: 'blur(30px)'
-          }} />
+              <div style={{
+                display: 'grid',
+                gap: '1rem'
+              }}>
+                {features.map((item, index) => (
+                  <motion.div
+                    key={index}
+                    className="signup-highlight-card"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 + index * 0.1, duration: 0.5 }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '46px',
+                      height: '46px',
+                      minWidth: '46px',
+                      background: 'linear-gradient(135deg, #32cd32 0%, #5ed85e 100%)',
+                      borderRadius: '12px',
+                      color: 'white',
+                      boxShadow: '0 4px 12px rgba(50, 205, 50, 0.2)'
+                    }}>
+                      <item.icon size={22} />
+                    </div>
+                    <div>
+                      <h3 style={{
+                        fontFamily: "'Lato', sans-serif",
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#2c1810',
+                        margin: '0 0 0.2rem 0'
+                      }}>
+                        {item.title}
+                      </h3>
+                      <p style={{
+                        fontFamily: "'Lato', sans-serif",
+                        fontSize: '0.85rem',
+                        color: '#888',
+                        margin: 0,
+                        lineHeight: '1.4',
+                        fontWeight: '400'
+                      }}>
+                        {item.description}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
-          {/* Mobile-only features preview */}
-          {isMobile && (
+          {/* Right Side — Signup Form */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              margin: '0 auto',
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderRadius: isMobile ? '16px' : '20px',
+              padding: isMobile ? '2rem 1.5rem' : '2.5rem',
+              boxShadow: '0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(50, 205, 50, 0.06)',
+              border: '1px solid rgba(50, 205, 50, 0.1)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Decorative accent bar */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: 'linear-gradient(90deg, #32cd32 0%, #5ed85e 50%, #32cd32 100%)',
+              borderRadius: '20px 20px 0 0'
+            }} />
+
+            {/* Decorative blobs */}
+            <div style={{
+              position: 'absolute',
+              top: '-60px',
+              right: '-60px',
+              width: '120px',
+              height: '120px',
+              background: 'radial-gradient(circle, rgba(50, 205, 50, 0.08) 0%, transparent 70%)',
+              borderRadius: '50%',
+              pointerEvents: 'none'
+            }} />
+            <div style={{
+              position: 'absolute',
+              bottom: '-40px',
+              left: '-40px',
+              width: '100px',
+              height: '100px',
+              background: 'radial-gradient(circle, rgba(230, 126, 34, 0.06) 0%, transparent 70%)',
+              borderRadius: '50%',
+              pointerEvents: 'none'
+            }} />
+
+            {/* Mobile features preview */}
+            {isMobile && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
+                style={{
+                  textAlign: 'center',
+                  marginBottom: '1.5rem',
+                  padding: '1rem 1.25rem',
+                  background: 'linear-gradient(135deg, rgba(50, 205, 50, 0.05) 0%, rgba(94, 216, 94, 0.03) 100%)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(50, 205, 50, 0.08)'
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  marginBottom: '0.5rem'
+                }}>
+                  <FiBook size={18} color="#32cd32" />
+                  <FiUsers size={18} color="#32cd32" />
+                  <FiStar size={18} color="#32cd32" />
+                  <FiCamera size={18} color="#32cd32" />
+                </div>
+                <p style={{
+                  fontFamily: "'Lato', sans-serif",
+                  fontSize: '0.85rem',
+                  color: '#888',
+                  margin: 0,
+                  lineHeight: '1.4'
+                }}>
+                  Share recipes • Build following • Get recognition • Showcase skills
+                </p>
+              </motion.div>
+            )}
+
+            {/* Header */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
-              style={{
-                textAlign: 'center',
-                marginBottom: '2rem',
-                padding: '1.5rem',
-                background: 'rgba(50, 205, 50, 0.05)',
-                borderRadius: '12px',
-                border: '1px solid rgba(50, 205, 50, 0.1)'
-              }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              style={{ textAlign: 'center', marginBottom: isMobile ? '1.75rem' : '2rem' }}
             >
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
-                gap: '1rem',
-                marginBottom: '1rem'
+                alignItems: 'center',
+                gap: '0.75rem',
+                marginBottom: '0.75rem'
               }}>
-                <FiBook size={20} color="#32cd32" />
-                <FiUsers size={20} color="#32cd32" />
-                <FiStar size={20} color="#32cd32" />
-                <FiCamera size={20} color="#32cd32" />
+                <motion.div
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <FiHeart size={28} color="#32cd32" />
+                </motion.div>
+                <h1 style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: isMobile ? '2rem' : '2.25rem',
+                  fontWeight: '600',
+                  color: '#2c1810',
+                  margin: 0,
+                  lineHeight: 1.1
+                }}>
+                  Become a Creator
+                </h1>
               </div>
               <p style={{
-                fontSize: '0.9rem',
-                color: '#666',
+                fontFamily: "'Lato', sans-serif",
+                color: '#888',
+                fontSize: isMobile ? '0.95rem' : '1rem',
                 margin: 0,
-                lineHeight: '1.4'
+                lineHeight: '1.5',
+                fontWeight: '400'
               }}>
-                Share recipes • Build following • Get recognition • Showcase skills
+                Start sharing your delicious recipes today
               </p>
             </motion.div>
-          )}
 
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            style={{ textAlign: 'center', marginBottom: '2rem' }}
-          >
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '1rem',
-              marginBottom: '1rem'
-            }}>
-              <FiHeart size={32} color="#32cd32" />
-              <h1 style={{
-                fontSize: isMobile ? '1.75rem' : '2rem',
-                fontWeight: '700',
-                background: 'linear-gradient(135deg, #32cd32 0%, #e67e22 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                margin: 0
-              }}>
-                Become a Creator
-              </h1>
-            </div>
-            <p style={{
-              color: '#666',
-              fontSize: isMobile ? '1rem' : '1.1rem',
-              margin: 0,
-              lineHeight: '1.5'
-            }}>
-              Start sharing your delicious recipes today
-            </p>
-          </motion.div>
-
-          {/* Form */}
-          <motion.form
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-            onSubmit={handleSubmit}
-          >
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                color: '#333',
-                fontWeight: '500',
-                fontSize: '0.95rem'
-              }}>
-                Creator Username
-              </label>
-              <div style={{ position: 'relative' }}>
-                <FiUser style={{
-                  position: 'absolute',
-                  left: '1rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#999',
-                  zIndex: 1
-                }} />
-                <input
-                  name="username"
-                  type="text"
-                  placeholder="Choose your creator name"
-                  value={form.username}
-                  onChange={handleChange}
-                  onKeyPress={handleKeyPress}
-                  style={{
-                    width: '100%',
-                    padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '1rem 1rem 1rem 3rem',
-                    borderRadius: '12px',
-                    border: '1px solid #e0e0e0',
-                    fontSize: isMobile ? '16px' : '1rem', // 16px prevents zoom on iOS
-                    transition: 'all 0.3s ease',
-                    background: 'rgba(255, 255, 255, 0.8)',
-                    outline: 'none',
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    appearance: 'none'
-                  }}
-                  onFocus={e => {
-                    e.target.style.borderColor = '#32cd32';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(50, 205, 50, 0.1)';
-                  }}
-                  onBlur={e => {
-                    e.target.style.borderColor = '#e0e0e0';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  required
-                  autoComplete="username"
-                />
-              </div>
-              <p style={{
-                fontSize: '0.8rem',
-                color: '#999',
-                margin: '0.5rem 0 0 0'
-              }}>
-                This will be your public creator name
-              </p>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                color: '#333',
-                fontWeight: '500',
-                fontSize: '0.95rem'
-              }}>
-                Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <FiLock style={{
-                  position: 'absolute',
-                  left: '1rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#999',
-                  zIndex: 1
-                }} />
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Create a secure password"
-                  value={form.password}
-                  onChange={handleChange}
-                  onKeyPress={handleKeyPress}
-                  style={{
-                    width: '100%',
-                    padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '1rem 1rem 1rem 3rem',
-                    borderRadius: '12px',
-                    border: '1px solid #e0e0e0',
-                    fontSize: isMobile ? '16px' : '1rem', // 16px prevents zoom on iOS
-                    transition: 'all 0.3s ease',
-                    background: 'rgba(255, 255, 255, 0.8)',
-                    outline: 'none',
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    appearance: 'none'
-                  }}
-                  onFocus={e => {
-                    e.target.style.borderColor = '#32cd32';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(50, 205, 50, 0.1)';
-                  }}
-                  onBlur={e => {
-                    e.target.style.borderColor = '#e0e0e0';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  required
-                  autoComplete="new-password"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                style={{
-                  color: '#e74c3c',
-                  marginBottom: '1.5rem',
-                  padding: '1rem',
-                  backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(231, 76, 60, 0.2)',
-                  fontSize: '0.9rem'
-                }}
-              >
-                {error}
-              </motion.div>
-            )}
-
-            <motion.button
-              type="submit"
-              disabled={loading}
-              whileHover={{ scale: loading ? 1 : 1.02 }}
-              whileTap={{ scale: loading ? 1 : 0.98 }}
-              style={{
-                width: '100%',
-                padding: isMobile ? '0.875rem' : '1rem',
-                background: loading 
-                  ? 'linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)'
-                  : 'linear-gradient(135deg, #32cd32 0%, #5ed85e 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: isMobile ? '1rem' : '1.1rem',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                boxShadow: loading ? 'none' : '0 4px 15px rgba(50, 205, 50, 0.3)'
-              }}
+            {/* Form */}
+            <motion.form
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              onSubmit={handleSubmit}
             >
-              {loading ? (
-                <>
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    border: '2px solid rgba(255,255,255,0.3)',
-                    borderTop: '2px solid white',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  color: '#2c1810',
+                  fontWeight: '500',
+                  fontSize: '0.9rem',
+                  fontFamily: "'Lato', sans-serif",
+                  letterSpacing: '0.01em'
+                }}>
+                  Creator Username
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <FiUser style={{
+                    position: 'absolute',
+                    left: '1rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#8bc48b',
+                    zIndex: 1
                   }} />
-                  Creating Account...
-                </>
-              ) : (
-                <>
-                  <FiUserPlus />
-                  Join as Creator
-                </>
-              )}
-            </motion.button>
-          </motion.form>
+                  <input
+                    name="username"
+                    type="text"
+                    placeholder="Choose your creator name"
+                    value={form.username}
+                    onChange={handleChange}
+                    onKeyPress={handleKeyPress}
+                    className="signup-input-field"
+                    required
+                    autoComplete="username"
+                  />
+                </div>
+                <p style={{
+                  fontFamily: "'Lato', sans-serif",
+                  fontSize: '0.8rem',
+                  color: '#aaa',
+                  margin: '0.4rem 0 0 0',
+                  fontWeight: '400'
+                }}>
+                  This will be your public creator name
+                </p>
+              </div>
 
-          {/* Footer */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-            style={{
-              textAlign: 'center',
-              marginTop: '2rem',
-              padding: '1.5rem 0',
-              borderTop: '1px solid rgba(50, 205, 50, 0.1)'
-            }}
-          >
-            <p style={{
-              color: '#666',
-              fontSize: '0.95rem',
-              margin: '0 0 1rem 0'
-            }}>
-              Already have an account?
-            </p>
-            <Link
-              to="/login"
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  color: '#2c1810',
+                  fontWeight: '500',
+                  fontSize: '0.9rem',
+                  fontFamily: "'Lato', sans-serif",
+                  letterSpacing: '0.01em'
+                }}>
+                  Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <FiLock style={{
+                    position: 'absolute',
+                    left: '1rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#8bc48b',
+                    zIndex: 1
+                  }} />
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder="Create a secure password"
+                    value={form.password}
+                    onChange={handleChange}
+                    onKeyPress={handleKeyPress}
+                    className="signup-input-field"
+                    required
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  style={{
+                    color: '#c0392b',
+                    marginBottom: '1.25rem',
+                    padding: '0.875rem 1rem',
+                    backgroundColor: 'rgba(231, 76, 60, 0.08)',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(231, 76, 60, 0.15)',
+                    fontSize: '0.9rem',
+                    fontFamily: "'Lato', sans-serif",
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span style={{ fontSize: '1.1rem' }}>⚠️</span>
+                  {error}
+                </motion.div>
+              )}
+
+              <motion.button
+                type="submit"
+                disabled={loading}
+                className="signup-submit-btn"
+                whileHover={{ scale: loading ? 1 : 1.02 }}
+                whileTap={{ scale: loading ? 1 : 0.98 }}
+              >
+                {loading ? (
+                  <>
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderTop: '2px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    <FiUserPlus />
+                    Join as Creator
+                  </>
+                )}
+              </motion.button>
+            </motion.form>
+
+            {/* Footer */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                color: '#32cd32',
-                textDecoration: 'none',
-                fontWeight: '600',
-                fontSize: '1rem',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={e => {
-                e.target.style.color = '#228b22';
-                e.target.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={e => {
-                e.target.style.color = '#32cd32';
-                e.target.style.transform = 'translateY(0)';
+                textAlign: 'center',
+                marginTop: '1.75rem',
+                paddingTop: '1.5rem',
+                borderTop: '1px solid rgba(50, 205, 50, 0.1)'
               }}
             >
-              <FiCoffee />
-              Sign In to Cook
-            </Link>
+              <p style={{
+                fontFamily: "'Lato', sans-serif",
+                color: '#999',
+                fontSize: '0.9rem',
+                margin: '0 0 0.75rem 0',
+                fontWeight: '400'
+              }}>
+                Already have an account?
+              </p>
+              <Link to="/login" className="signup-link">
+                <FiCoffee />
+                Sign In to Cook
+              </Link>
+            </motion.div>
           </motion.div>
-
-          <style>
-            {`
-              @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-              }
-            `}
-          </style>
-        </motion.div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
