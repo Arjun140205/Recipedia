@@ -88,6 +88,12 @@ const Signup = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Lato:wght@300;400;500;600;700&display=swap');
 
+        .signup-page-wrapper *,
+        .signup-page-wrapper *::before,
+        .signup-page-wrapper *::after {
+          box-sizing: border-box;
+        }
+
         .signup-page-wrapper {
           min-height: 100vh;
           background: linear-gradient(135deg, #fdfbf7 0%, #fff8f0 50%, #fdfbf7 100%);
@@ -96,7 +102,9 @@ const Signup = () => {
           justify-content: center;
           padding: 2rem;
           position: relative;
-          overflow: hidden;
+          overflow-x: hidden;
+          overflow-y: auto;
+          width: 100%;
         }
 
         .signup-page-wrapper::before {
@@ -134,14 +142,62 @@ const Signup = () => {
           z-index: 1;
         }
 
+        .signup-form-card {
+          max-width: 480px;
+          width: 100%;
+          margin: 0 auto;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-radius: 20px;
+          padding: 2.5rem;
+          box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(50, 205, 50, 0.06);
+          border: 1px solid rgba(50, 205, 50, 0.1);
+          position: relative;
+          overflow: hidden;
+        }
+
         @media (max-width: 1024px) {
           .signup-grid {
             grid-template-columns: 1fr;
             gap: 2rem;
-            max-width: 480px;
+            max-width: 100%;
           }
           .signup-page-wrapper {
             padding: 1rem;
+          }
+          .signup-form-card {
+            max-width: 100%;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .signup-page-wrapper {
+            padding: 0.75rem;
+            align-items: flex-start;
+            padding-top: 1.5rem;
+          }
+          .signup-form-card {
+            border-radius: 16px;
+            padding: 1.75rem 1.25rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .signup-page-wrapper {
+            padding: 0.5rem;
+            padding-top: 1rem;
+          }
+          .signup-form-card {
+            border-radius: 14px;
+            padding: 1.5rem 1rem;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .signup-form-card {
+            padding: 1.25rem 0.875rem;
+            border-radius: 12px;
           }
         }
 
@@ -160,6 +216,7 @@ const Signup = () => {
           appearance: none;
           color: #2D3748;
           box-sizing: border-box;
+          max-width: 100%;
         }
 
         .signup-input-field::placeholder {
@@ -177,6 +234,13 @@ const Signup = () => {
           .signup-input-field {
             padding: 0.875rem 0.875rem 0.875rem 2.75rem;
             font-size: 16px;
+            border-radius: 10px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .signup-input-field {
+            padding: 0.8rem 0.75rem 0.8rem 2.5rem;
           }
         }
 
@@ -205,6 +269,7 @@ const Signup = () => {
           box-shadow: 0 4px 15px rgba(50, 205, 50, 0.3);
           position: relative;
           overflow: hidden;
+          box-sizing: border-box;
         }
 
         .signup-submit-btn:hover:not(:disabled) {
@@ -226,6 +291,7 @@ const Signup = () => {
           .signup-submit-btn {
             padding: 0.875rem;
             font-size: 1rem;
+            border-radius: 10px;
           }
         }
 
@@ -265,6 +331,42 @@ const Signup = () => {
           color: #228b22;
           background: rgba(50, 205, 50, 0.06);
           transform: translateY(-1px);
+        }
+
+        .signup-header-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 2.25rem;
+          font-weight: 600;
+          color: #2c1810;
+          margin: 0;
+          line-height: 1.1;
+        }
+
+        .signup-header-subtitle {
+          font-family: 'Lato', sans-serif;
+          color: #888;
+          font-size: 1rem;
+          margin: 0;
+          line-height: 1.5;
+          font-weight: 400;
+        }
+
+        @media (max-width: 480px) {
+          .signup-header-title {
+            font-size: 1.75rem;
+          }
+          .signup-header-subtitle {
+            font-size: 0.9rem;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .signup-header-title {
+            font-size: 1.5rem;
+          }
+          .signup-header-subtitle {
+            font-size: 0.85rem;
+          }
         }
 
         @keyframes spin {
@@ -389,23 +491,10 @@ const Signup = () => {
 
           {/* Right Side — Signup Form */}
           <motion.div
+            className="signup-form-card"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            style={{
-              maxWidth: '480px',
-              width: '100%',
-              margin: '0 auto',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              borderRadius: isMobile ? '16px' : '20px',
-              padding: isMobile ? '2rem 1.5rem' : '2.5rem',
-              boxShadow: '0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(50, 205, 50, 0.06)',
-              border: '1px solid rgba(50, 205, 50, 0.1)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
           >
             {/* Decorative accent bar */}
             <div style={{
@@ -496,27 +585,13 @@ const Signup = () => {
                   animate={{ scale: [1, 1.15, 1] }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <FiHeart size={28} color="#32cd32" />
+                  <FiHeart size={isMobile ? 24 : 28} color="#32cd32" />
                 </motion.div>
-                <h1 style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: isMobile ? '2rem' : '2.25rem',
-                  fontWeight: '600',
-                  color: '#2c1810',
-                  margin: 0,
-                  lineHeight: 1.1
-                }}>
+                <h1 className="signup-header-title">
                   Become a Creator
                 </h1>
               </div>
-              <p style={{
-                fontFamily: "'Lato', sans-serif",
-                color: '#888',
-                fontSize: isMobile ? '0.95rem' : '1rem',
-                margin: 0,
-                lineHeight: '1.5',
-                fontWeight: '400'
-              }}>
+              <p className="signup-header-subtitle">
                 Start sharing your delicious recipes today
               </p>
             </motion.div>
