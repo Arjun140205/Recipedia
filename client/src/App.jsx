@@ -11,6 +11,11 @@ import FridgeMate from './pages/FridgeMate';
 import Recipes from './pages/Recipes';
 import Creators from './pages/Creators';
 import CreatorProfile from './pages/CreatorProfile';
+import AboutUs from './pages/AboutUs';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import Contact from './pages/Contact';
+import HelpSupport from './pages/HelpSupport';
 import Navbar from './component/Navbar';
 import PrivateRoute from './component/PrivateRoute';
 import Footer from './component/Footer';
@@ -34,6 +39,11 @@ function App() {
         <Route path="/creator/:userId" element={<CreatorProfile />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/about-us" element={<AboutUs />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/help" element={<HelpSupport />} />
         <Route
           path="/dashboard"
           element={
