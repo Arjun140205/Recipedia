@@ -1,9 +1,10 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  FiHeart, 
-  FiGithub, 
-  FiMail, 
+import {
+  FiHeart,
+  FiGithub,
+  FiMail,
   FiLinkedin,
   FiCoffee,
   FiMapPin,
@@ -145,18 +146,18 @@ const Footer = () => {
   ];
 
   const quickLinks = [
-    'About Us',
-    'Privacy Policy',
-    'Terms of Service',
-    'Contact',
-    'Help & Support',
+    { label: 'About Us', path: '/about-us' },
+    { label: 'Privacy Policy', path: '/privacy' },
+    { label: 'Terms of Service', path: '/terms' },
+    { label: 'Contact', path: '/contact' },
+    { label: 'Help & Support', path: '/help' },
   ];
 
   return (
     <footer style={footerStyle}>
       <div style={backgroundDecorationStyle}></div>
-      
-      <motion.div 
+
+      <motion.div
         style={containerStyle}
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -171,13 +172,13 @@ const Footer = () => {
               Recipedia
             </div>
             <p style={descriptionStyle}>
-              Discover amazing recipes, manage your ingredients, and cook with confidence. 
+              Discover amazing recipes, manage your ingredients, and cook with confidence.
               Making every meal a delightful experience for families everywhere.
             </p>
             <div style={socialLinksStyle}>
               <motion.div
                 style={socialLinkStyle}
-                whileHover={{ 
+                whileHover={{
                   scale: 1.1,
                   background: 'rgba(230, 126, 34, 0.2)',
                   color: '#e67e22'
@@ -188,7 +189,7 @@ const Footer = () => {
               </motion.div>
               <motion.div
                 style={socialLinkStyle}
-                whileHover={{ 
+                whileHover={{
                   scale: 1.1,
                   background: 'rgba(243, 156, 18, 0.2)',
                   color: '#f39c12'
@@ -199,7 +200,7 @@ const Footer = () => {
               </motion.div>
               <motion.div
                 style={socialLinkStyle}
-                whileHover={{ 
+                whileHover={{
                   scale: 1.1,
                   background: 'rgba(211, 84, 0, 0.2)',
                   color: '#d35400'
@@ -215,18 +216,26 @@ const Footer = () => {
           <div>
             <h3 style={sectionTitleStyle}>Quick Links</h3>
             <div style={linkListStyle}>
-              {quickLinks.map((link, index) => (
-                <motion.a
-                  key={link}
-                  style={linkStyle}
-                  whileHover={{ 
-                    color: '#e67e22',
+              {quickLinks.map((link) => (
+                <motion.div
+                  key={link.path}
+                  whileHover={{
                     paddingLeft: '0.5rem'
                   }}
                   transition={{ duration: 0.2 }}
                 >
-                  {link}
-                </motion.a>
+                  <Link
+                    to={link.path}
+                    style={{
+                      ...linkStyle,
+                      display: 'block'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.color = '#e67e22'}
+                    onMouseOut={e => e.currentTarget.style.color = '#bdc3c7'}
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -265,13 +274,13 @@ const Footer = () => {
             whileInView={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Made with 
+            Made with
             <motion.div
-              animate={{ 
+              animate={{
                 scale: [1, 1.2, 1],
                 color: ['#e74c3c', '#c0392b', '#e74c3c']
               }}
-              transition={{ 
+              transition={{
                 duration: 1.5,
                 repeat: Infinity,
                 ease: "easeInOut"
@@ -281,7 +290,7 @@ const Footer = () => {
             </motion.div>
             for moms and food lovers
           </motion.div>
-          
+
           <div style={{ color: '#95a5a6', fontSize: '0.85rem' }}>
             &copy; {new Date().getFullYear()} Recipedia. All rights reserved.
           </div>
