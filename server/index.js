@@ -331,6 +331,59 @@ app.get('/api/external-recipes/:id', async (req, res) => {
   }
 });
 
+// ─── Spoonacular Proxy Routes ───────────────────────────────────────────────
+// The API key never leaves the server; the client calls /api/spoonacular/*
+
+// POST /api/spoonacular/parseIngredients
+app.post('/api/spoonacular/parseIngredients', async (req, res) => {
+  const key = process.env.SPOONACULAR_API_KEY;
+  if (!key) return res.status(503).json({ error: 'Spoonacular API key not configured on server' });
+  try {
+    const response = await axios.post(
+      `https://api.spoonacular.com/recipes/parseIngredients?apiKey=${key}`,
+      req.body,
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+    res.json(response.data);
+  } catch (err) {
+    console.error('Spoonacular parseIngredients error:', err.message);
+    res.status(err.response?.status || 500).json({ error: err.message });
+  }
+});
+
+// GET /api/spoonacular/findByIngredients
+app.get('/api/spoonacular/findByIngredients', cacheMiddleware(300), async (req, res) => {
+  const key = process.env.SPOONACULAR_API_KEY;
+  if (!key) return res.status(503).json({ error: 'Spoonacular API key not configured on server' });
+  try {
+    const { ingredients, number = 12, ranking = 2, ignorePantry = true } = req.query;
+    const response = await axios.get(
+      `https://api.spoonacular.com/recipes/findByIngredients`,
+      { params: { apiKey: key, ingredients, number, ranking, ignorePantry } }
+    );
+    res.json(response.data);
+  } catch (err) {
+    console.error('Spoonacular findByIngredients error:', err.message);
+    res.status(err.response?.status || 500).json({ error: err.message });
+  }
+});
+
+// GET /api/spoonacular/recipes/:id/information
+app.get('/api/spoonacular/recipes/:id/information', cacheMiddleware(600), async (req, res) => {
+  const key = process.env.SPOONACULAR_API_KEY;
+  if (!key) return res.status(503).json({ error: 'Spoonacular API key not configured on server' });
+  try {
+    const response = await axios.get(
+      `https://api.spoonacular.com/recipes/${req.params.id}/information`,
+      { params: { apiKey: key } }
+    );
+    res.json(response.data);
+  } catch (err) {
+    console.error('Spoonacular recipe info error:', err.message);
+    res.status(err.response?.status || 500).json({ error: err.message });
+  }
+});
+
 // Custom Recipes CRUD Routes
 app.post('/api/recipes', authenticateJWT, upload.fields([
   { name: 'image', maxCount: 1 },
