@@ -28,6 +28,8 @@ const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
   .split(',')
   .map(o => o.trim());
 
+console.log('CORS allowed origins:', allowedOrigins);
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow same-origin / server-to-server calls (origin === undefined) and whitelisted origins
