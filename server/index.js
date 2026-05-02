@@ -63,23 +63,18 @@ app.use((req, res, next) => {
 
 // Middleware for JWT authentication
 const authenticateJWT = (req, res, next) => {
-  console.log('Authentication middleware called');
-  console.log('Headers:', req.headers);
-  
   const token = req.headers.authorization;
   if (!token) {
-    console.log('No token provided');
     return res.status(403).json({ error: 'Access denied' });
   }
-  
+
   try {
-    console.log('Token received:', token);
     const decoded = jwt.verify(token.replace('Bearer ', ''), JWT_SECRET);
-    console.log('Token decoded successfully:', decoded);
     req.user = decoded;
     next();
   } catch (err) {
-    console.error('Token verification failed:', err);
+    // Log only the error type/message — never the token value
+    console.error('Token verification failed:', err.name, err.message);
     return res.status(403).json({ error: 'Invalid token' });
   }
 };
