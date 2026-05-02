@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -38,8 +38,13 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Connect to MongoDB with error handling
-mongoose.connect('mongodb+srv://arjunbirsingh1699:recipedia@recipedia.vd6ihai.mongodb.net/?retryWrites=true&w=majority&appName=recipedia')
+// Connect to MongoDB — URI must be set in .env (never hardcode credentials)
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('FATAL: MONGODB_URI is not set. Add it to your .env file and restart.');
+  process.exit(1);
+}
+mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
