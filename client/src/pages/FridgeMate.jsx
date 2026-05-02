@@ -21,27 +21,8 @@ const FridgeMate = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [textareaHeight, setTextareaHeight] = useState('100px');
   
-  // Debug log to check environment variables
-  console.log('Environment variables:', {
-    NODE_ENV: process.env.NODE_ENV,
-    API_KEY_EXISTS: !!process.env.REACT_APP_SPOONACULAR_API_KEY,
-  });
-
-  const SPOONACULAR_API_KEY = process.env.REACT_APP_SPOONACULAR_API_KEY;
-
-  useEffect(() => {
-    // Verify API key on component mount
-    if (!SPOONACULAR_API_KEY) {
-      console.error('Spoonacular API key is not configured. Please check:',
-        '\n1. .env file exists in project root',
-        '\n2. .env has REACT_APP_SPOONACULAR_API_KEY=your_api_key',
-        '\n3. React app was restarted after adding .env'
-      );
-      toast.error('Recipe service is not properly configured. Please check API settings.');
-    } else {
-      console.log('API key is configured successfully');
-    }
-  }, [SPOONACULAR_API_KEY]);
+  // API key is kept server-side; client calls /api/spoonacular/* proxy routes
+  const BACKEND_URL = 'https://recipedia-2si5.onrender.com/api';
 
   // Handle window resize
   useEffect(() => {
@@ -57,23 +38,16 @@ const FridgeMate = () => {
   }, []);
 
   const analyzeIngredients = async (ingredientsText) => {
-    if (!SPOONACULAR_API_KEY) {
-      throw new Error('API key is not configured');
-    }
-
     try {
       const params = new URLSearchParams();
       params.append('ingredientList', ingredientsText);
       params.append('language', 'en');
 
+      // Proxied through backend — API key never exposed to client
       const response = await axios.post(
-        `https://api.spoonacular.com/recipes/parseIngredients?apiKey=${SPOONACULAR_API_KEY}`,
+        `${BACKEND_URL}/spoonacular/parseIngredients`,
         params,
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       );
       
       return response.data.map(item => ({
@@ -85,7 +59,7 @@ const FridgeMate = () => {
     } catch (error) {
       console.error('Error analyzing ingredients:', error);
       if (error.response?.status === 401) {
-        toast.error('API authentication failed. Please check API key configuration.');
+        toast.error('API authentication failed. Please contact support.');
       } else if (error.response?.status === 402) {
         toast.error('API quota exceeded. Please try again later.');
       } else {
@@ -101,11 +75,6 @@ const FridgeMate = () => {
       return;
     }
 
-    if (!SPOONACULAR_API_KEY) {
-      toast.error('Recipe service is not properly configured. Please check API settings.');
-      return;
-    }
-
     setLoading(true);
     try {
       // First, analyze ingredients using Spoonacular's NLP
@@ -117,19 +86,18 @@ const FridgeMate = () => {
         return;
       }
 
-      // Search for recipes using analyzed ingredients
+      // Search for recipes using analyzed ingredients (via backend proxy)
       const ingredientQuery = analyzedIngredients.map(ing => ing.name).join(',+');
-      const searchUrl = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${SPOONACULAR_API_KEY}&ingredients=${encodeURIComponent(ingredientQuery)}&number=12&ranking=2&ignorePantry=true`;
-      
-      const response = await axios.get(searchUrl);
+      const response = await axios.get(`${BACKEND_URL}/spoonacular/findByIngredients`, {
+        params: { ingredients: encodeURIComponent(ingredientQuery), number: 12, ranking: 2, ignorePantry: true }
+      });
       const recipes = response.data;
 
-      // Get detailed information for each recipe
+      // Get detailed information for each recipe (via backend proxy)
       const detailedRecipes = await Promise.all(
         recipes.map(async (recipe) => {
           try {
-            const detailUrl = `https://api.spoonacular.com/recipes/${recipe.id}/information?apiKey=${SPOONACULAR_API_KEY}`;
-            const detailResponse = await axios.get(detailUrl);
+            const detailResponse = await axios.get(`${BACKEND_URL}/spoonacular/recipes/${recipe.id}/information`);
             return {
               ...detailResponse.data,
               matchCount: recipe.usedIngredientCount,
@@ -189,10 +157,8 @@ const FridgeMate = () => {
     console.log('Fetching recipe details for ID:', id);
     
     try {
-      const detailUrl = `https://api.spoonacular.com/recipes/${id}/information?apiKey=${SPOONACULAR_API_KEY}`;
-      console.log('Request URL:', detailUrl);
-      
-      const detailResponse = await axios.get(detailUrl);
+      // Via backend proxy — API key stays server-side
+      const detailResponse = await axios.get(`${BACKEND_URL}/spoonacular/recipes/${id}/information`);
       
       const recipe = {
         ...detailResponse.data,
