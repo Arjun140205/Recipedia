@@ -48,8 +48,12 @@ mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Get JWT secret from .env file or use a default (for development only)
-const JWT_SECRET = process.env.JWT_SECRET || 'mySuperSecretKey123!';
+// JWT secret — must be set in .env; no fallback allowed
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET is not set. Generate a strong secret and add it to your .env file.');
+  process.exit(1);
+}
 
 // Request logging middleware
 app.use((req, res, next) => {
