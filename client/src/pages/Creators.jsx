@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { API_BASE_URL } from '../config';
 
 const Creators = () => {
   const [creators, setCreators] = useState([]);
@@ -27,7 +28,7 @@ const Creators = () => {
   const fetchCreators = async (pageNum = 1, reset = true) => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://recipedia-2si5.onrender.com/api/creators?page=${pageNum}&limit=12`);
+      const response = await axios.get(`${API_BASE_URL}/creators?page=${pageNum}&limit=12`);
 
       if (reset) {
         setCreators(response.data.creators);
