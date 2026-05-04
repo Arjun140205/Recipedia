@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
-const BASE_URL = 'https://recipedia-2si5.onrender.com/api';
+const BASE_URL = API_BASE_URL;
 const RECIPES_URL = `${BASE_URL}/recipes`;
 
 const getAuthHeader = () => {
