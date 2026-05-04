@@ -12,6 +12,8 @@ import {
 } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-toastify';
+// NOTE: When re-enabling the server share endpoint below, uncomment this import:
+// import { API_BASE_URL } from '../config';
 
 const EnhancedShare = ({ recipe, onClose }) => {
   const [shareContent, setShareContent] = useState(null);
@@ -77,7 +79,7 @@ const EnhancedShare = ({ recipe, onClose }) => {
       // Original server call (commented out until server is updated)
       /*
       
-      const shareUrl = `https://recipedia-2si5.onrender.com/api/recipes/${recipeId}/share`;
+      const shareUrl = `${API_BASE_URL}/recipes/${recipeId}/share`;
       console.log('Making request to:', shareUrl);
       
       const response = await axios.get(shareUrl);
