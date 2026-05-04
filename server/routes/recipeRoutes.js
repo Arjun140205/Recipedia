@@ -162,6 +162,13 @@ router.post('/match', authenticateJWT, async (req, res) => {
 
 // ─── GET /api/recipes/:id ─────────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
+  // Validate ObjectId format before hitting the DB.
+  // Without this, Mongoose throws a CastError which we'd surface as a 500,
+  // but a bad ID is a client error → 400, not a server error → 500.
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid recipe ID format' });
+  }
+
   try {
     const recipe = await Recipe.findById(req.params.id);
     if (!recipe) {
