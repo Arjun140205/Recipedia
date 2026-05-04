@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 import '../styles/dashboard.css';
 
 const CreatorProfileEdit = ({ user, onClose, onUpdate }) => {
@@ -98,7 +99,7 @@ const CreatorProfileEdit = ({ user, onClose, onUpdate }) => {
 
       const token = localStorage.getItem('token');
       const response = await axios.put(
-        'https://recipedia-2si5.onrender.com/api/user/profile',
+        `${API_BASE_URL}/user/profile`,
         formDataToSend,
         {
           headers: {
