@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { API_BASE_URL, SERVER_URL } from '../config';
 import RecipeCard from '../component/RecipeCard';
 
 const CreatorProfile = () => {
@@ -33,7 +34,7 @@ const CreatorProfile = () => {
 
   const fetchCreatorProfile = async () => {
     try {
-      const response = await axios.get(`https://recipedia-2si5.onrender.com/api/user/profile/${userId}`);
+      const response = await axios.get(`${API_BASE_URL}/user/profile/${userId}`);
       setCreator(response.data);
     } catch (error) {
       console.error('Error fetching creator profile:', error);
@@ -46,7 +47,7 @@ const CreatorProfile = () => {
   const fetchCreatorRecipes = async (pageNum = 1, reset = true) => {
     try {
       setRecipesLoading(true);
-      const response = await axios.get(`https://recipedia-2si5.onrender.com/api/creators/${userId}/recipes?page=${pageNum}&limit=12`);
+      const response = await axios.get(`${API_BASE_URL}/creators/${userId}/recipes?page=${pageNum}&limit=12`);
       
       if (reset) {
         setRecipes(response.data.recipes);
@@ -333,7 +334,7 @@ const CreatorProfile = () => {
             src={creator.profile.avatar ? 
               (creator.profile.avatar.startsWith('http') ? 
                 creator.profile.avatar : 
-                `https://recipedia-2si5.onrender.com${creator.profile.avatar}`) : 
+                `${SERVER_URL}${creator.profile.avatar}`) : 
               '/default-avatar.jpg'}
             alt={creator.profile.displayName}
             onError={(e) => {
