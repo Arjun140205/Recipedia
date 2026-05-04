@@ -32,6 +32,7 @@ import VirtualizedRecipeGrid from '../components/VirtualizedRecipeGrid';
 import FoodLoader from '../components/FoodLoader';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import '../styles/dashboard.css';
+import { API_BASE_URL } from '../config';
 
 const RECIPE_CATEGORIES = {
   meals: {
@@ -604,7 +605,7 @@ const Dashboard = () => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const userResponse = await fetch('https://recipedia-2si5.onrender.com/api/user/profile', {
+          const userResponse = await fetch(`${API_BASE_URL}/user/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
