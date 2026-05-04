@@ -3,6 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaSearch, FaTimes, FaUtensils, FaGlobeAmericas } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { API_BASE_URL } from '../config';
 
 // Utility function to generate unique keys for recipes
 const generateUniqueRecipeKey = (recipe, index, prefix = 'recipe') => {
@@ -22,7 +23,7 @@ const FridgeMate = () => {
   const [textareaHeight, setTextareaHeight] = useState('100px');
   
   // API key is kept server-side; client calls /api/spoonacular/* proxy routes
-  const BACKEND_URL = 'https://recipedia-2si5.onrender.com/api';
+  const BACKEND_URL = API_BASE_URL;
 
   // Handle window resize
   useEffect(() => {
