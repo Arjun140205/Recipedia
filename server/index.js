@@ -125,6 +125,15 @@ app.use('/api/recipes', mutationLimiter, recipeRouter); // CRUD /api/recipes/* �
 app.use('/api/user', userRouter);      // GET/PUT/POST /api/user/*
 app.use('/api/creators', creatorRoutes); // GET /api/creators, /api/creators/:userId/recipes
 
+// ─── Frontend Fallback (ARCH-7) ───────────────────────────────────────────────
+// Serve static files from the React frontend build
+app.use(express.static(path.join(__dirname, '../client/build')));
+
+// Any route that doesn't start with /api or /uploads gets the React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+});
+
 // ─── Global error handler ─────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
