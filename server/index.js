@@ -81,9 +81,29 @@ app.use('/uploads', express.static(uploadsDir));
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+  filename: (_req, file, cb) => {
+    // Sanitize filename by removing anything that isn't alphanumeric, dot, hyphen, or underscore
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+    cb(null, `${Date.now()}-${sanitizedName}`);
+  },
 });
-const upload = multer({ storage });
+
+const fileFilter = (_req, file, cb) => {
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPG, PNG, and WEBP are allowed.'), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
 // Inject the multer instance into routes that need it
 setRecipeUpload(upload);
