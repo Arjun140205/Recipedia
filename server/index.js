@@ -28,6 +28,7 @@ const externalRoutes = require('./routes/externalRoutes');
 const { router: recipeRouter, setUpload: setRecipeUpload } = require('./routes/recipeRoutes');
 const { router: userRouter, setUpload: setUserUpload } = require('./routes/userRoutes');
 const creatorRoutes = require('./routes/creatorRoutes');
+const { generalLimiter, mutationLimiter } = require('./middleware/rateLimiter');
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,11 @@ app.use(cors({
 
 app.use(express.json());
 
+// ─── Rate limiting (ARCH-4) ───────────────────────────────────────────────────
+// generalLimiter: 100 req / 15 min per IP — applied to all /api/* routes.
+// Auth-specific stricter limits are applied at the route level in authRoutes.js.
+app.use('/api', generalLimiter);
+
 // ─── Uploads directory & multer ───────────────────────────────────────────────
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -93,9 +99,9 @@ app.use((req, _res, next) => {
 app.get('/api/test', (_req, res) => res.json({ message: 'Server is working!' }));
 
 // ─── Route modules ────────────────────────────────────────────────────────────
-app.use('/api', authRoutes);           // POST /api/signup, /api/login
+app.use('/api', authRoutes);           // POST /api/signup, /api/login  (authLimiter applied inside)
 app.use('/api', externalRoutes);       // GET  /api/external-recipes/*, /api/spoonacular/*
-app.use('/api/recipes', recipeRouter); // CRUD /api/recipes/*, /like, /share, /match
+app.use('/api/recipes', mutationLimiter, recipeRouter); // CRUD /api/recipes/* — mutationLimiter on writes
 app.use('/api/user', userRouter);      // GET/PUT/POST /api/user/*
 app.use('/api/creators', creatorRoutes); // GET /api/creators, /api/creators/:userId/recipes
 
