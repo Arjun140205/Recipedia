@@ -3,12 +3,13 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { authLimiter } = require('../middleware/rateLimiter');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // ─── POST /api/signup ────────────────────────────────────────────────────────
 // Register a new user. No JWT required.
-router.post('/signup', async (req, res) => {
+router.post('/signup', authLimiter, async (req, res) => {
   try {
     console.log('Signup request received:', req.body);
     const { username, password } = req.body;
@@ -41,7 +42,7 @@ router.post('/signup', async (req, res) => {
 
 // ─── POST /api/login ─────────────────────────────────────────────────────────
 // Authenticate user and return a signed JWT.
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
