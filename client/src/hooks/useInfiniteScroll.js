@@ -169,38 +169,7 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
     }
   }, [itemsPerPage]); // PHASE 2.2: Removed recipeState dependency - using functional updates
 
-  // Scroll handler - throttled and optimized
-  useEffect(() => {
-    let scrollTimeout;
-    
-    const handleScroll = () => {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = document.documentElement.clientHeight;
 
-      // Throttle scroll events
-      if (scrollTimeout) return;
-      
-      scrollTimeout = setTimeout(() => {
-        scrollTimeout = null;
-        
-        // Load more when user scrolls to 80% of the page
-        if (!isLoadingRef.current && hasMore && scrollTop + clientHeight >= scrollHeight * 0.8) {
-          const nextPage = currentPageRef.current + 1;
-          if (!loadedPagesRef.current.has(nextPage)) {
-            currentPageRef.current = nextPage;
-            loadMoreRecipes(nextPage);
-          }
-        }
-      }, 200);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-    };
-  }, [hasMore, loadMoreRecipes]);
 
   // Add recipe to cache
   const addRecipe = useCallback((newRecipe) => {
