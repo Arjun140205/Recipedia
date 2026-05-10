@@ -101,5 +101,6 @@ const RecipeSchema = new mongoose.Schema({
     required: true 
   }
 }, { timestamps: true });
+RecipeSchema.index({ isPublic: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Recipe', RecipeSchema);
