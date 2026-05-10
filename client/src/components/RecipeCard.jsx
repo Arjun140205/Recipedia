@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
 import { FaStar, FaRegStar, FaStarHalfAlt, FaClock, FaTimes } from 'react-icons/fa';
+import { resolveAssetUrl } from '../utils/resolveAssetUrl';
 
 // Memoized StarRating component
 const StarRating = React.memo(({ rating, onRate, size = '1.2rem', interactive = false }) => {
@@ -152,7 +153,7 @@ const RecipeCard = React.memo(({ recipe, onSelect, onDelete, onRate, isNew, isPr
           }} />
         )}
         <img
-          src={imageError ? '/default-recipe-image.jpg' : recipe.image}
+          src={imageError ? '/default-recipe-image.jpg' : resolveAssetUrl(recipe.image)}
           alt={DOMPurify.sanitize(recipe.title)}
           onError={handleImageError}
           style={{
