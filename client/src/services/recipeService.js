@@ -167,11 +167,11 @@ export const deleteRecipe = async (id) => {
   return response.data;
 };
 
-export const findMatchingRecipes = async (ingredients, filters = {}, minMatch = 60) => {
+export const findMatchingRecipes = async (ingredients, filters = {}, minMatch = 60, page = 1, limit = 10) => {
   try {
     const response = await axios.post(
       `${RECIPES_URL}/match`,
-      { ingredients, filters, minMatch },
+      { ingredients, filters, minMatch, page, limit },
       { headers: getAuthHeader() }
     );
     return response.data;
