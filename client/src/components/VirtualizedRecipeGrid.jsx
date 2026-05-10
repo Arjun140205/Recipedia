@@ -15,12 +15,6 @@ const VirtualizedRecipeGrid = React.memo(({
   onLoadMore,
   hasMore
 }) => {
-  console.log('[VirtualizedRecipeGrid] Rendering with:', {
-    recipeIdsCount: recipeIds.length,
-    loading,
-    hasMore,
-    timestamp: Date.now()
-  });
 
   // IMPORTANT: All hooks must be called before any early returns
   // Footer component for loading more
