@@ -14,6 +14,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-toastify';
 // NOTE: When re-enabling the server share endpoint below, uncomment this import:
 // import { API_BASE_URL } from '../config';
+import { resolveAssetUrl } from '../utils/resolveAssetUrl';
 
 const EnhancedShare = ({ recipe, onClose }) => {
   const [shareContent, setShareContent] = useState(null);
@@ -54,7 +55,7 @@ const EnhancedShare = ({ recipe, onClose }) => {
         title: recipe.strMeal || recipe.title,
         description: recipe.strInstructions || recipe.description || `Delicious ${recipe.category || 'recipe'} by ${creatorName}`,
         url: `${baseUrl}/recipe/${recipe.idMeal || recipeId}`,
-        image: recipe.strMealThumb || recipe.image || '',
+        image: recipe.strMealThumb || resolveAssetUrl(recipe.image) || '',
         creator: recipe.idMeal ? 'TheMealDB' : creatorName,
         prepTime: recipe.prepTime || 30,
         servings: recipe.servings || 4,
