@@ -151,9 +151,21 @@ router.get('/', async (req, res) => {
 // NOTE: This must be declared BEFORE /:id routes to avoid param collision.
 router.post('/match', authenticateJWT, async (req, res) => {
   try {
-    const { ingredients, filters, minMatch } = req.body;
-    const matchedRecipes = await RecipeMatchService.findMatchingRecipes(ingredients, filters, minMatch);
-    res.json(matchedRecipes);
+    const { ingredients, filters, minMatch, page, limit } = req.body;
+    
+    // Parse pagination parameters
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+
+    const matchedData = await RecipeMatchService.findMatchingRecipes(
+      ingredients, 
+      filters, 
+      minMatch, 
+      pageNum, 
+      limitNum
+    );
+    
+    res.json(matchedData);
   } catch (error) {
     console.error('Error matching recipes:', error);
     res.status(500).json({ error: 'Error matching recipes' });
