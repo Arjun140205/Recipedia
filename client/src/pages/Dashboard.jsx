@@ -547,6 +547,58 @@ class ErrorBoundary extends React.Component {
 
 // Removed generateUniqueKey - now using stable recipe._id as keys directly
 
+const ScrollToTopButton = () => {
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      setShowScrollTop(scrollTop > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  if (!showScrollTop) return null;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      onClick={scrollToTop}
+      style={{
+        position: 'fixed',
+        bottom: '2rem',
+        right: '2rem',
+        backgroundColor: '#e67e22',
+        color: 'white',
+        border: 'none',
+        borderRadius: '50%',
+        width: '50px',
+        height: '50px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        zIndex: 999,
+        fontSize: '1.5rem'
+      }}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      aria-label="Scroll to top"
+    >
+      ↑
+    </motion.button>
+  );
+};
+
 const Dashboard = () => {
   // Use custom hook for infinite scroll logic (ISOLATED)
   // PHASE 2: Now returns normalized data (byId, allIds)
@@ -583,7 +635,6 @@ const Dashboard = () => {
   const [shareRecipe, setShareRecipe] = useState(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [showScrollTop, setShowScrollTop] = useState(false);
   const [useVirtualization, setUseVirtualization] = useState(true); // PHASE 3: Toggle virtualization
   const [formData, setFormData] = useState({
     title: '',
@@ -620,22 +671,6 @@ const Dashboard = () => {
     };
 
     fetchUserProfile();
-  }, []);
-
-  // Scroll to top button visibility
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      setShowScrollTop(scrollTop > 300);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Scroll to top function
-  const scrollToTop = useCallback(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   // Accessibility: Focus management
@@ -1611,37 +1646,7 @@ const Dashboard = () => {
           </AnimatePresence>
 
           {/* Scroll to Top Button */}
-          {showScrollTop && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              onClick={scrollToTop}
-              style={{
-                position: 'fixed',
-                bottom: '2rem',
-                right: '2rem',
-                backgroundColor: '#e67e22',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '50px',
-                height: '50px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                zIndex: 999,
-                fontSize: '1.5rem'
-              }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              aria-label="Scroll to top"
-            >
-              ↑
-            </motion.button>
-          )}
+          <ScrollToTopButton />
         </div>
       </div>
     </ErrorBoundary>
