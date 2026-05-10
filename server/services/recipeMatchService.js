@@ -46,8 +46,9 @@ class RecipeMatchService {
    * @param {number} minMatch - Minimum match percentage (0-100)
    * @returns {Array} Matching recipes with match percentages
    */
-  static async findMatchingRecipes(userIngredients, filters = {}, minMatch = 60) {
+  static async findMatchingRecipes(userIngredients, filters = {}, minMatch = 60, page = 1, limit = 10) {
     let query = {};
+    const skip = (page - 1) * limit;
 
     // Apply dietary filters
     if (filters.vegetarian) {
@@ -70,22 +71,140 @@ class RecipeMatchService {
       query.difficulty = filters.difficulty;
     }
 
-    // Get all recipes that match the basic filters
-    const recipes = await Recipe.find(query);
+    const normalizedUserIngredients = userIngredients.map(ing => ing.toLowerCase());
 
-    // Calculate match percentage for each recipe
-    const matchedRecipes = recipes.map(recipe => {
-      const matchPercentage = this.calculateMatchPercentage(userIngredients, recipe.ingredients);
-      return {
-        ...recipe.toObject(),
-        matchPercentage
-      };
-    });
+    const pipeline = [
+      { $match: query },
+      {
+        $addFields: {
+          processedIngredients: {
+            $map: {
+              input: { $ifNull: ["$ingredients", []] },
+              as: "ing",
+              in: {
+                name: { $toLower: "$$ing.name" },
+                optional: { $ifNull: ["$$ing.optional", false] }
+              }
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          requiredIngredients: {
+            $filter: {
+              input: "$processedIngredients",
+              as: "ing",
+              cond: { $not: "$$ing.optional" }
+            }
+          },
+          optionalIngredients: {
+            $filter: {
+              input: "$processedIngredients",
+              as: "ing",
+              cond: "$$ing.optional"
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          matchedRequiredCount: {
+            $size: {
+              $filter: {
+                input: "$requiredIngredients",
+                as: "ing",
+                cond: { $in: ["$$ing.name", normalizedUserIngredients] }
+              }
+            }
+          },
+          matchedOptionalCount: {
+            $size: {
+              $filter: {
+                input: "$optionalIngredients",
+                as: "ing",
+                cond: { $in: ["$$ing.name", normalizedUserIngredients] }
+              }
+            }
+          },
+          requiredTotal: { $size: "$requiredIngredients" },
+          optionalTotal: { $size: "$optionalIngredients" }
+        }
+      },
+      {
+        $addFields: {
+          requiredScore: {
+            $cond: [
+              { $eq: ["$requiredTotal", 0] },
+              1,
+              { $divide: ["$matchedRequiredCount", "$requiredTotal"] }
+            ]
+          },
+          optionalScore: {
+            $cond: [
+              { $eq: ["$optionalTotal", 0] },
+              1,
+              { $divide: ["$matchedOptionalCount", "$optionalTotal"] }
+            ]
+          }
+        }
+      },
+      {
+        $addFields: {
+          matchPercentage: {
+            $round: [
+              {
+                $multiply: [
+                  {
+                    $add: [
+                      { $multiply: ["$requiredScore", 0.7] },
+                      { $multiply: ["$optionalScore", 0.3] }
+                    ]
+                  },
+                  100
+                ]
+              },
+              0
+            ]
+          }
+        }
+      },
+      { $match: { matchPercentage: { $gte: minMatch } } },
+      { $sort: { matchPercentage: -1 } },
+      {
+        $facet: {
+          metadata: [ { $count: "total" } ],
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                processedIngredients: 0,
+                requiredIngredients: 0,
+                optionalIngredients: 0,
+                matchedRequiredCount: 0,
+                matchedOptionalCount: 0,
+                requiredTotal: 0,
+                optionalTotal: 0,
+                requiredScore: 0,
+                optionalScore: 0
+              }
+            }
+          ]
+        }
+      }
+    ];
 
-    // Filter by minimum match percentage and sort by match percentage
-    return matchedRecipes
-      .filter(recipe => recipe.matchPercentage >= minMatch)
-      .sort((a, b) => b.matchPercentage - a.matchPercentage);
+    const results = await Recipe.aggregate(pipeline);
+    const total = results[0].metadata[0] ? results[0].metadata[0].total : 0;
+    const recipes = results[0].data;
+
+    return {
+      recipes,
+      totalRecipes: total,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 
   /**
