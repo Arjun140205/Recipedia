@@ -551,13 +551,21 @@ const ScrollToTopButton = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
+    let scrollTimeout = null;
     const handleScroll = () => {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      setShowScrollTop(scrollTop > 300);
+      if (scrollTimeout) return;
+      scrollTimeout = setTimeout(() => {
+        scrollTimeout = null;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        setShowScrollTop(scrollTop > 300);
+      }, 200);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const scrollToTop = useCallback(() => {
