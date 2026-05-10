@@ -88,8 +88,8 @@ router.post('/', authenticateJWT, (req, res, next) => {
 
     const populatedRecipe = {
       ...recipe.toObject(),
-      image: imagePath ? `${req.protocol}://${req.get('host')}${imagePath}` : '',
-      video: videoPath ? `${req.protocol}://${req.get('host')}${videoPath}` : '',
+      image: imagePath || '',
+      video: videoPath || '',
     };
     res.status(201).json({ message: 'Recipe created successfully', recipe: populatedRecipe });
   } catch (error) {
@@ -125,9 +125,9 @@ router.get('/', async (req, res) => {
         console.warn('Recipe with invalid ID found:', recipeObj._id);
       }
 
-      if (recipeObj.image) {
-        recipeObj.image = `${req.protocol}://${req.get('host')}${recipeObj.image}`;
-      }
+      // Image stays as relative path (e.g. /uploads/filename.jpg).
+      // The frontend resolves the full URL using SERVER_URL from config.js.
+      // This avoids instability from req.protocol/host changing between requests.
       // Convert ingredients array back to string for frontend compatibility
       if (recipeObj.ingredients && Array.isArray(recipeObj.ingredients)) {
         recipeObj.ingredients = recipeObj.ingredients.map(ing => ing.name).join('\n');
@@ -254,8 +254,8 @@ router.put('/:id', authenticateJWT, (req, res, next) => {
 
     const populatedRecipe = {
       ...recipe.toObject(),
-      image: recipe.image ? `${req.protocol}://${req.get('host')}${recipe.image}` : '',
-      video: recipe.video ? `${req.protocol}://${req.get('host')}${recipe.video}` : '',
+      image: recipe.image || '',
+      video: recipe.video || '',
     };
 
     res.json({ message: 'Recipe updated successfully', recipe: populatedRecipe });
@@ -356,7 +356,9 @@ router.get('/:id/share', async (req, res) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
-    const baseUrl = req.protocol + '://' + req.get('host');
+    // For share links we still need a full URL. Use x-forwarded-proto if behind a proxy.
+    const protocol = req.get('x-forwarded-proto') || req.protocol;
+    const baseUrl = protocol + '://' + req.get('host');
     const recipeUrl = `${baseUrl}/recipe/${recipe._id}`;
     const imageUrl = recipe.image ? `${baseUrl}${recipe.image}` : `${baseUrl}/default-recipe-image.jpg`;
 
