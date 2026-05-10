@@ -12,14 +12,6 @@ const RecipeGrid = React.memo(({
   onRateRecipe,
   newRecipeIds 
 }) => {
-  // PHASE 1: Instrumentation - Log renders
-  console.log('[RecipeGrid] Rendering with:', {
-    recipeIdsCount: recipeIds.length,
-    loading,
-    newRecipeIdsCount: newRecipeIds.size,
-    timestamp: Date.now()
-  });
-
   if (loading && recipeIds.length === 0) {
     return (
       <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
