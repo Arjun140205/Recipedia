@@ -33,6 +33,7 @@ import FoodLoader from '../components/FoodLoader';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import '../styles/dashboard.css';
 import { API_BASE_URL } from '../config';
+import { resolveAssetUrl } from '../utils/resolveAssetUrl';
 
 const RECIPE_CATEGORIES = {
   meals: {
@@ -213,7 +214,7 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, onShare, sho
 
         <div style={{ position: 'relative', height: '300px' }}>
           <img
-            src={recipe.image}
+            src={resolveAssetUrl(recipe.image)}
             alt={recipe.title}
             style={{
               width: '100%',
@@ -265,7 +266,7 @@ const RecipeModal = ({ recipe, onClose, onDelete, onUpdate, onRate, onShare, sho
                   backgroundColor: '#000'
                 }}
               >
-                <source src={recipe.video} type="video/mp4" />
+                <source src={resolveAssetUrl(recipe.video)} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>
