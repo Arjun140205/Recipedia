@@ -73,13 +73,6 @@ const RecipeCard = React.memo(({ recipe, onSelect, onDelete, onRate, isNew, isPr
   const [imageError, setImageError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // PHASE 1: Instrumentation - Log renders
-  console.log(`[RecipeCard] Rendering: ${recipe._id}`, { 
-    title: recipe.title, 
-    isNew,
-    timestamp: Date.now()
-  });
-
   const handleImageError = () => {
     setImageError(true);
   };
