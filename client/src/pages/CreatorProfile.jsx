@@ -12,6 +12,7 @@ import {
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { API_BASE_URL, SERVER_URL } from '../config';
+import { resolveAssetUrl } from '../utils/resolveAssetUrl';
 import RecipeCard from '../component/RecipeCard';
 
 const CreatorProfile = () => {
@@ -135,7 +136,7 @@ const CreatorProfile = () => {
 
           <div style={{ position: 'relative' }}>
             <img
-              src={recipe.image || '/default-recipe-image.jpg'}
+              src={resolveAssetUrl(recipe.image, '/default-recipe-image.jpg')}
               alt={recipe.title}
               style={{
                 width: '100%',
@@ -260,7 +261,7 @@ const CreatorProfile = () => {
                     borderRadius: '8px'
                   }}
                 >
-                  <source src={recipe.video} type="video/mp4" />
+                  <source src={resolveAssetUrl(recipe.video)} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
