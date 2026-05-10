@@ -111,10 +111,8 @@ setRecipeUpload(upload);
 setUserUpload(upload);
 
 // ─── Request logging ──────────────────────────────────────────────────────────
-app.use((req, _res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
+// Custom request logging removed to prevent console spam.
+// Consider using a library like morgan for configurable logging if needed.
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/test', (_req, res) => res.json({ message: 'Server is working!' }));
