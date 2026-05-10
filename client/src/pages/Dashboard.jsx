@@ -650,6 +650,7 @@ const Dashboard = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showModal, selectedRecipe]);
 
+  const prevSortedRef = useRef([]);
   // PHASE 2: Memoized filtered and sorted recipe IDs (OPTIMIZED)
   // Returns IDs only, not full objects - preserves object identity
   const displayedRecipeIds = useMemo(() => {
@@ -685,6 +686,12 @@ const Dashboard = () => {
     });
 
     console.log('[Dashboard] Displayed recipe IDs after filter/sort:', sortedIds.length);
+    
+    const key = sortedIds.join(',');
+    const prevKey = prevSortedRef.current.join(',');
+    if (key === prevKey) return prevSortedRef.current; // same reference
+    
+    prevSortedRef.current = sortedIds;
     return sortedIds;
   }, [recipeIds, recipesById, searchQuery, selectedCategory, sortOption]);
 
