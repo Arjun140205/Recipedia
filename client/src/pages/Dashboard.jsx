@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, Profiler } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import React from 'react';
 import DOMPurify from 'dompurify';
 import { createRecipe, updateRecipe as updateRecipeAPI } from '../services/recipeService';
@@ -557,8 +557,6 @@ const Dashboard = () => {
     initialLoading,
     hasMore,
     newRecipeIds,
-    loadedPages,
-    currentPage,
     addRecipe,
     updateRecipe: updateRecipeInCache,
     deleteRecipe: deleteRecipeFromCache,
@@ -720,12 +718,13 @@ const Dashboard = () => {
     }
   }, [updateRecipeInCache]);
 
-  // Performance optimization: Debounced search
+  // Performance optimization: Properly debounced search using a ref
+  const searchTimeoutRef = useRef(null);
   const debouncedSearch = useCallback((value) => {
-    const timeoutId = setTimeout(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
       setSearchQuery(value);
     }, 300);
-    return () => clearTimeout(timeoutId);
   }, []);
 
   // Handle form submission
@@ -935,25 +934,6 @@ const Dashboard = () => {
         </div>
 
         <div className="dashboard-content">
-          {/* Debug Info Panel - Remove in production */}
-          {process.env.NODE_ENV === 'development' && (
-            <div style={{
-              backgroundColor: '#f0f0f0',
-              padding: '0.5rem 1rem',
-              borderRadius: '4px',
-              marginBottom: '1rem',
-              fontSize: '0.85rem',
-              color: '#666'
-            }}>
-              <strong>Debug:</strong> Cached: {recipeIds.length} | 
-              Displayed: {displayedRecipeIds.length} | 
-              Current Page: {currentPage} |
-              Pages Loaded: {Array.from(loadedPages).join(', ')} | 
-              Loading: {recipesLoading ? 'Yes' : 'No'} | 
-              Has More: {hasMore ? 'Yes' : 'No'}
-            </div>
-          )}
-
           {/* Search and Actions Section */}
           <div className="search-and-actions">
             <div className="search-container">
@@ -1168,28 +1148,17 @@ const Dashboard = () => {
 
         {/* Recipe Grid - Conditional: Virtualized or Regular */}
         {useVirtualization ? (
-          <Profiler
-            id="VirtualizedRecipeGrid"
-            onRender={(id, phase, actualDuration, baseDuration, startTime, commitTime) => {
-              console.log(`[Profiler] ${id} - ${phase}`, {
-                actualDuration: `${actualDuration.toFixed(2)}ms`,
-                baseDuration: `${baseDuration.toFixed(2)}ms`,
-                improvement: baseDuration > 0 ? `${((1 - actualDuration / baseDuration) * 100).toFixed(1)}%` : 'N/A'
-              });
-            }}
-          >
-            <VirtualizedRecipeGrid
-              recipeIds={displayedRecipeIds}
-              recipesById={recipesById}
-              loading={recipesLoading}
-              onSelectRecipe={handleSelectRecipe}
-              onDeleteRecipe={handleDeleteRecipe}
-              onRateRecipe={handleRateRecipe}
-              newRecipeIds={newRecipeIds}
-              onLoadMore={loadMore}
-              hasMore={hasMore}
-            />
-          </Profiler>
+          <VirtualizedRecipeGrid
+            recipeIds={displayedRecipeIds}
+            recipesById={recipesById}
+            loading={recipesLoading}
+            onSelectRecipe={handleSelectRecipe}
+            onDeleteRecipe={handleDeleteRecipe}
+            onRateRecipe={handleRateRecipe}
+            newRecipeIds={newRecipeIds}
+            onLoadMore={loadMore}
+            hasMore={hasMore}
+          />
         ) : (
           <>
             <div style={{
@@ -1197,26 +1166,15 @@ const Dashboard = () => {
               gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
               gap: '2rem'
             }}>
-              <Profiler
-                id="RecipeGrid"
-                onRender={(id, phase, actualDuration, baseDuration, startTime, commitTime) => {
-                  console.log(`[Profiler] ${id} - ${phase}`, {
-                    actualDuration: `${actualDuration.toFixed(2)}ms`,
-                    baseDuration: `${baseDuration.toFixed(2)}ms`,
-                    improvement: baseDuration > 0 ? `${((1 - actualDuration / baseDuration) * 100).toFixed(1)}%` : 'N/A'
-                  });
-                }}
-              >
-                <RecipeGrid
-                  recipeIds={displayedRecipeIds}
-                  recipesById={recipesById}
-                  loading={recipesLoading}
-                  onSelectRecipe={handleSelectRecipe}
-                  onDeleteRecipe={handleDeleteRecipe}
-                  onRateRecipe={handleRateRecipe}
-                  newRecipeIds={newRecipeIds}
-                />
-              </Profiler>
+              <RecipeGrid
+                recipeIds={displayedRecipeIds}
+                recipesById={recipesById}
+                loading={recipesLoading}
+                onSelectRecipe={handleSelectRecipe}
+                onDeleteRecipe={handleDeleteRecipe}
+                onRateRecipe={handleRateRecipe}
+                newRecipeIds={newRecipeIds}
+              />
             </div>
 
             {/* Infinite Scroll Loading Indicator */}
