@@ -65,6 +65,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // needed for /api/spoonacular/parseIngredients proxy
 
 // ─── Rate limiting (ARCH-4) ───────────────────────────────────────────────────
 // generalLimiter: 100 req / 15 min per IP — applied to all /api/* routes.
