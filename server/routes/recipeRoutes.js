@@ -106,18 +106,15 @@ router.post('/', authenticateJWT, (req, res, next) => {
 // ─── GET /api/recipes ─────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const [recipeDocs, total] = await Promise.all([
-      Recipe.find()
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 }),
-      Recipe.countDocuments(),
-    ]);
-
+    const cursor = req.query.cursor; // ObjectId string of last recipe from previous page
+    const query = cursor ? { _id: { $lt: new mongoose.Types.ObjectId(cursor) } } : {};
+    const recipeDocs = await Recipe.find(query)
+      .sort({ _id: -1 })
+      .limit(limit);
+    // Total count for pagination UI (optional)
+    const total = await Recipe.countDocuments();
+    const nextCursor = recipeDocs.length ? recipeDocs[recipeDocs.length - 1]._id : null;
     const recipes = recipeDocs.map(recipe => {
       const recipeObj = recipe.toObject();
 
@@ -135,10 +132,22 @@ router.get('/', async (req, res) => {
       return recipeObj;
     });
 
+    // Compute ETag based on latest updatedAt timestamp for caching
+    const latestUpdatedAt = recipeDocs.reduce((max, r) => {
+      const updated = r.updatedAt || r.createdAt;
+      return updated > max ? updated : max;
+    }, new Date(0));
+    const etag = `W/"${latestUpdatedAt.getTime()}"`;
+    // Set caching headers
+    res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    res.set('ETag', etag);
+    // Return 304 if client cache is valid
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
+    }
     res.json({
       recipes,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
+      nextCursor,
       totalRecipes: total,
     });
   } catch (error) {
