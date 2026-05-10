@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { FaTimes, FaCheckCircle } from 'react-icons/fa';
+import { resolveAssetUrl } from '../utils/resolveAssetUrl';
 
 const RecipeCard = ({ recipe, onSelect, onDelete }) => {
   const [imageError, setImageError] = useState(false);
@@ -109,7 +110,7 @@ const RecipeCard = ({ recipe, onSelect, onDelete }) => {
 
       <div className="recipe-image" style={{ position: 'relative', height: '200px', backgroundColor: '#f0f0f0' }}>
         <img 
-          src={imageError ? '/default-recipe-image.jpg' : (recipe.strMealThumb || recipe.image)} 
+          src={imageError ? '/default-recipe-image.jpg' : (recipe.strMealThumb || resolveAssetUrl(recipe.image))} 
           alt={recipe.strMeal || recipe.title}
           onError={handleImageError}
           onLoad={handleImageLoad}
