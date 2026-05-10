@@ -14,6 +14,8 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true); // Track initial load
   const [hasMore, setHasMore] = useState(true);
+  // FIX: newRecipeIds as state so memo comparators get a stable, versioned Set
+  const [newRecipeIds, setNewRecipeIds] = useState(() => new Set());
   
   // Use refs to avoid re-renders
   const currentPageRef = useRef(1);
@@ -66,6 +68,9 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
             const nextRecipesData = await getRecipes(2, nextBatchSize);
             
             setRecipeState((prevState) => {
+              // FIX: Only create new objects if recipes actually changed.
+              // Returning prevState preserves object identity → RecipeGrid won't re-render.
+              let changed = false;
               const newById = { ...prevState.byId };
               const newAllIds = [...prevState.allIds];
               
@@ -73,19 +78,17 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
                 if (!newById[recipe._id]) {
                   newById[recipe._id] = recipe;
                   newAllIds.push(recipe._id);
+                  changed = true;
                 }
               });
               
+              if (!changed) return prevState;
               return { byId: newById, allIds: newAllIds };
             });
             
             setHasMore(nextRecipesData.currentPage < nextRecipesData.totalPages);
             loadedPagesRef.current.add(2);
             currentPageRef.current = 2;
-            
-            console.log('[useInfiniteScroll] Background batch loaded:', {
-              totalRecipes: allIds.length + nextRecipesData.recipes.length
-            });
           } catch (error) {
             console.error('Error loading background batch:', error);
           }
@@ -122,33 +125,34 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
       
       const recipesData = await getRecipes(pageToLoad, itemsPerPage);
       
-      // PHASE 2: Use functional update with normalized structure
+      // FIX: Use functional update with normalized structure + change guard
       setRecipeState((prevState) => {
+        let changed = false;
         const newById = { ...prevState.byId };
         const newAllIds = [...prevState.allIds];
+        const addedIds = [];
         
         recipesData.recipes.forEach(recipe => {
           // Only add if not already present
           if (!newById[recipe._id]) {
             newById[recipe._id] = recipe; // Preserve object identity
             newAllIds.push(recipe._id);
-            
-            // Mark new recipes for animation
-            newRecipeIdsRef.current.add(recipe._id);
+            addedIds.push(recipe._id);
+            changed = true;
           }
         });
         
-        // Clear animation flags after 500ms
-        setTimeout(() => {
-          recipesData.recipes.forEach(r => {
-            newRecipeIdsRef.current.delete(r._id);
-          });
-        }, 500);
+        if (!changed) return prevState; // Return same reference → no re-render
         
-        console.log('[useInfiniteScroll] Added recipes:', {
-          newCount: recipesData.recipes.length,
-          totalCount: newAllIds.length
-        });
+        // Mark new recipes for animation via state
+        if (addedIds.length > 0) {
+          addedIds.forEach(id => newRecipeIdsRef.current.add(id));
+          setNewRecipeIds(new Set(newRecipeIdsRef.current));
+          setTimeout(() => {
+            addedIds.forEach(id => newRecipeIdsRef.current.delete(id));
+            setNewRecipeIds(new Set(newRecipeIdsRef.current));
+          }, 500);
+        }
         
         return { byId: newById, allIds: newAllIds };
       });
@@ -201,6 +205,7 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
   // Add recipe to cache
   const addRecipe = useCallback((newRecipe) => {
     newRecipeIdsRef.current.add(newRecipe._id);
+    setNewRecipeIds(new Set(newRecipeIdsRef.current));
     
     // PHASE 2: Update normalized structure
     setRecipeState((prev) => ({
@@ -210,6 +215,7 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
     
     setTimeout(() => {
       newRecipeIdsRef.current.delete(newRecipe._id);
+      setNewRecipeIds(new Set(newRecipeIdsRef.current));
     }, 500);
   }, []);
 
@@ -257,7 +263,7 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
     loading,
     initialLoading, // NEW: Track initial load state
     hasMore,
-    newRecipeIds: newRecipeIdsRef.current,
+    newRecipeIds, // FIX: React state-based Set for stable memo comparisons
     loadedPages: loadedPagesRef.current,
     currentPage: currentPageRef.current,
     addRecipe,
