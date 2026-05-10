@@ -130,7 +130,8 @@ app.use('/api/creators', creatorRoutes); // GET /api/creators, /api/creators/:us
 app.use(express.static(path.join(__dirname, '../client/build')));
 
 // Any route that doesn't start with /api or /uploads gets the React app
-app.get('(.*)', (req, res) => {
+// Using app.use() (no path) bypasses path-to-regexp entirely — works on all versions
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
 });
 
