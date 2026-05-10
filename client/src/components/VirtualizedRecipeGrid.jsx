@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import RecipeCard from './RecipeCard';
 import { FaSpinner, FaUtensils } from 'react-icons/fa';
@@ -51,8 +51,11 @@ const VirtualizedRecipeGrid = React.memo(({
   }, [hasMore, loading]);
 
   // Item renderer with priority for first items (LCP optimization)
+  const recipesByIdRef = useRef(recipesById);
+  useEffect(() => { recipesByIdRef.current = recipesById; }, [recipesById]);
+
   const itemContent = useCallback((index, recipeId) => {
-    const recipe = recipesById[recipeId];
+    const recipe = recipesByIdRef.current[recipeId];
     if (!recipe) {
       console.warn('[VirtualizedRecipeGrid] Recipe not found:', recipeId);
       return null;
@@ -76,7 +79,7 @@ const VirtualizedRecipeGrid = React.memo(({
         />
       </div>
     );
-  }, [recipesById, onSelectRecipe, onDeleteRecipe, onRateRecipe, newRecipeIds]);
+  }, [onSelectRecipe, onDeleteRecipe, onRateRecipe, newRecipeIds]);
 
   // Early returns AFTER all hooks
   // Empty state
