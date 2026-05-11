@@ -50,5 +50,14 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
   handler: rateLimitHandler,
 });
+// ─── 4. Read API limiter (for read-heavy routes like scroll) ───────────────────
+// 300 requests per 15 minutes per IP.
+const readLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+});
 
-module.exports = { authLimiter, mutationLimiter, generalLimiter };
+module.exports = { authLimiter, mutationLimiter, generalLimiter, readLimiter };
