@@ -155,9 +155,9 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
           pagesLoaded: Array.from(loadedPagesRef.current)
         });
 
-        // LCP OPTIMIZATION: Immediately fetch next batch in background
-        // This provides smooth UX without blocking initial render
-        setTimeout(async () => {
+        // LCP OPTIMIZATION: Fetch next batch in background without artificial delay
+        // This provides a smooth UX while keeping the initial render prioritized
+        (async () => {
           try {
             const nextBatchSize = 24; // Fetch 24 more (total 30)
             const nextRecipesData = await getRecipes(2, nextBatchSize);
@@ -177,7 +177,7 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
           } catch (error) {
             console.error('Error loading background batch:', error);
           }
-        }, 100); // Small delay to prioritize initial render
+        })();
         
       } catch (error) {
         toast.error('Failed to fetch recipes');
