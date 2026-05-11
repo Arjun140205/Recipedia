@@ -6,6 +6,14 @@ import { resolveAssetUrl } from '../utils/resolveAssetUrl';
 
 // Memoized StarRating component
 const StarRating = React.memo(({ rating, onRate, size = '1.2rem', interactive = false }) => {
+  const handleClick = React.useCallback((e) => {
+    if (!interactive || !onRate) return;
+    const value = e.currentTarget.getAttribute('data-value');
+    if (value) {
+      onRate(parseFloat(value));
+    }
+  }, [interactive, onRate]);
+
   const stars = [];
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 !== 0;
@@ -15,36 +23,39 @@ const StarRating = React.memo(({ rating, onRate, size = '1.2rem', interactive = 
       stars.push(
         <FaStar
           key={i}
+          data-value={i}
           style={{
             color: '#e67e22',
             fontSize: size,
             cursor: interactive ? 'pointer' : 'default'
           }}
-          onClick={() => interactive && onRate(i)}
+          onClick={handleClick}
         />
       );
     } else if (i === fullStars + 1 && hasHalfStar) {
       stars.push(
         <FaStarHalfAlt
           key={i}
+          data-value={i - 0.5}
           style={{
             color: '#e67e22',
             fontSize: size,
             cursor: interactive ? 'pointer' : 'default'
           }}
-          onClick={() => interactive && onRate(i - 0.5)}
+          onClick={handleClick}
         />
       );
     } else {
       stars.push(
         <FaRegStar
           key={i}
+          data-value={i}
           style={{
             color: '#e67e22',
             fontSize: size,
             cursor: interactive ? 'pointer' : 'default'
           }}
-          onClick={() => interactive && onRate(i)}
+          onClick={handleClick}
         />
       );
     }
@@ -101,12 +112,12 @@ const RecipeCard = React.memo(({ recipe, onSelect, onDelete, onRate, isNew, isPr
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={onSelect}
+      onClick={() => onSelect(recipe)}
       role="button"
       tabIndex={0}
       onKeyPress={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          onSelect();
+          onSelect(recipe);
         }
       }}
     >
@@ -222,7 +233,10 @@ const RecipeCard = React.memo(({ recipe, onSelect, onDelete, onRate, isNew, isPr
     prevProps.recipe.image === nextProps.recipe.image &&
     prevProps.recipe.prepTime === nextProps.recipe.prepTime &&
     prevProps.recipe.category === nextProps.recipe.category &&
-    prevProps.isNew === nextProps.isNew
+    prevProps.isNew === nextProps.isNew &&
+    prevProps.onSelect === nextProps.onSelect &&
+    prevProps.onDelete === nextProps.onDelete &&
+    prevProps.onRate === nextProps.onRate
   );
   
   // PHASE 1: Instrumentation - Log why re-rendering
@@ -235,6 +249,9 @@ const RecipeCard = React.memo(({ recipe, onSelect, onDelete, onRate, isNew, isPr
       prepTimeChanged: prevProps.recipe.prepTime !== nextProps.recipe.prepTime,
       categoryChanged: prevProps.recipe.category !== nextProps.recipe.category,
       isNewChanged: prevProps.isNew !== nextProps.isNew,
+      onSelectChanged: prevProps.onSelect !== nextProps.onSelect,
+      onDeleteChanged: prevProps.onDelete !== nextProps.onDelete,
+      onRateChanged: prevProps.onRate !== nextProps.onRate,
       recipeObjectChanged: prevProps.recipe !== nextProps.recipe
     });
   }
