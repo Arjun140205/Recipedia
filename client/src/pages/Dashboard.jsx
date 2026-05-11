@@ -632,6 +632,7 @@ const Dashboard = () => {
   });
   const [showModal, setShowModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortOption, setSortOption] = useState('recent');
@@ -697,7 +698,7 @@ const Dashboard = () => {
   // PHASE 2: Memoized filtered and sorted recipe IDs (OPTIMIZED)
   // Returns IDs only, not full objects - preserves object identity
   const displayedRecipeIds = useMemo(() => {
-    console.log('[Dashboard] Filtering recipes. Total cached:', recipeIds.length);
+    // console.log('[Dashboard] Filtering recipes. Total cached:', recipeIds.length);
     
     // Filter IDs based on recipe data
     const filteredIds = recipeIds.filter(id => {
@@ -728,7 +729,7 @@ const Dashboard = () => {
       }
     });
 
-    console.log('[Dashboard] Displayed recipe IDs after filter/sort:', sortedIds.length);
+    // console.log('[Dashboard] Displayed recipe IDs after filter/sort:', sortedIds.length);
     
     const key = sortedIds.join(',');
     const prevKey = prevSortedRef.current.join(',');
@@ -990,8 +991,11 @@ const Dashboard = () => {
             <div className="search-container">
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => debouncedSearch(e.target.value)}
+                value={inputValue}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  debouncedSearch(e.target.value);
+                }}
                 placeholder="Search recipes..."
                 className="search-input"
                 aria-label="Search recipes"
