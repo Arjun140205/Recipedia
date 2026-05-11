@@ -1,5 +1,5 @@
 // src/App.jsx
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './toastify-fix.css'; // Custom CSS to fix passive event listener warning
@@ -21,7 +21,8 @@ import PrivateRoute from './component/PrivateRoute';
 import Footer from './component/Footer';
 
 function App() {
-  const currentPath = window.location.pathname;
+  const location = useLocation();
+  const currentPath = location.pathname;
   const showFooter =
     currentPath !== '/recipes' &&
     currentPath !== '/about' &&
