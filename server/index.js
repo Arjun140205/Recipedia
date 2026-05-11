@@ -28,7 +28,7 @@ const externalRoutes = require('./routes/externalRoutes');
 const { router: recipeRouter, setUpload: setRecipeUpload } = require('./routes/recipeRoutes');
 const { router: userRouter, setUpload: setUserUpload } = require('./routes/userRoutes');
 const creatorRoutes = require('./routes/creatorRoutes');
-const { generalLimiter, mutationLimiter } = require('./middleware/rateLimiter');
+const { generalLimiter, mutationLimiter, readLimiter } = require('./middleware/rateLimiter');
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
@@ -68,9 +68,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // needed for /api/spoonacular/parseIngredients proxy
 
 // ─── Rate limiting (ARCH-4) ───────────────────────────────────────────────────
-// generalLimiter: 100 req / 15 min per IP — applied to all /api/* routes.
+// generalLimiter: 100 req / 15 min per IP — applied to all /api/* routes except GET /api/recipes.
 // Auth-specific stricter limits are applied at the route level in authRoutes.js.
-app.use('/api', generalLimiter);
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET' && req.path.startsWith('/recipes')) {
+    return next();
+  }
+  return generalLimiter(req, res, next);
+});
 
 // ─── Uploads directory & multer ───────────────────────────────────────────────
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -120,7 +125,12 @@ app.get('/api/test', (_req, res) => res.json({ message: 'Server is working!' }))
 // ─── Route modules ────────────────────────────────────────────────────────────
 app.use('/api', authRoutes);           // POST /api/signup, /api/login  (authLimiter applied inside)
 app.use('/api', externalRoutes);       // GET  /api/external-recipes/*, /api/spoonacular/*
-app.use('/api/recipes', mutationLimiter, recipeRouter); // CRUD /api/recipes/* — mutationLimiter on writes
+app.use('/api/recipes', (req, res, next) => {
+  if (req.method === 'GET') {
+    return readLimiter(req, res, next);
+  }
+  return mutationLimiter(req, res, next);
+}, recipeRouter); // CRUD /api/recipes/* — mutationLimiter on writes, readLimiter on reads
 app.use('/api/user', userRouter);      // GET/PUT/POST /api/user/*
 app.use('/api/creators', creatorRoutes); // GET /api/creators, /api/creators/:userId/recipes
 
