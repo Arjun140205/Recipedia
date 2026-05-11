@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import RecipeCard from './RecipeCard';
 import { FaSpinner, FaUtensils } from 'react-icons/fa';
@@ -81,6 +81,8 @@ const VirtualizedRecipeGrid = React.memo(({
     );
   }, [onSelectRecipe, onDeleteRecipe, onRateRecipe, newRecipeIds]);
 
+  const componentsConfig = useMemo(() => ({ Footer }), [Footer]);
+
   // Early returns AFTER all hooks
   // Empty state
   if (!loading && recipeIds.length === 0) {
@@ -121,9 +123,7 @@ const VirtualizedRecipeGrid = React.memo(({
       endReached={onLoadMore}
       overscan={200}
       itemContent={itemContent}
-      components={{
-        Footer
-      }}
+      components={componentsConfig}
       useWindowScroll
     />
   );
