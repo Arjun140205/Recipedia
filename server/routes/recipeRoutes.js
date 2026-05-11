@@ -109,7 +109,7 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const cursor = req.query.cursor; // ObjectId string of last recipe from previous page
     const query = cursor ? { _id: { $lt: new mongoose.Types.ObjectId(cursor) } } : {};
-    const recipeDocs = await Recipe.find(query)
+    const recipeDocs = await Recipe.find(query, { likes: 0, instructions: 0 })
       .sort({ _id: -1 })
       .limit(limit);
     // Total count for pagination UI (optional)
