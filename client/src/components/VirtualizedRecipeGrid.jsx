@@ -74,12 +74,11 @@ const VirtualizedRecipeGrid = React.memo(({
           onSelect={onSelectRecipe}
           onDelete={onDeleteRecipe}
           onRate={onRateRecipe}
-          isNew={newRecipeIds.has(recipeId)}
           isPriority={isPriority}
         />
       </div>
     );
-  }, [onSelectRecipe, onDeleteRecipe, onRateRecipe, newRecipeIds]);
+  }, [onSelectRecipe, onDeleteRecipe, onRateRecipe]);
 
   const componentsConfig = useMemo(() => ({ Footer }), [Footer]);
 
