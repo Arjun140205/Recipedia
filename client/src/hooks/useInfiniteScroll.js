@@ -275,16 +275,21 @@ export const useInfiniteScroll = (itemsPerPage = 12) => {
     dispatch({ type: 'DELETE_RECIPE', payload: { recipeId } });
   }, []);
 
+  const hasMoreRef = useRef(state.hasMore);
+  useEffect(() => {
+    hasMoreRef.current = state.hasMore;
+  }, [state.hasMore]);
+
   // PHASE 3: Expose loadMore for virtualization
   const loadMore = useCallback(() => {
-    if (!state.hasMore || isLoadingRef.current) return;
+    if (!hasMoreRef.current || isLoadingRef.current) return;
     
     const nextPage = currentPageRef.current + 1;
     if (!loadedPagesRef.current.has(nextPage)) {
       currentPageRef.current = nextPage;
       loadMoreRecipes(nextPage);
     }
-  }, [state.hasMore, loadMoreRecipes]);
+  }, [loadMoreRecipes]);
 
   return {
     // PHASE 2: Return normalized data
